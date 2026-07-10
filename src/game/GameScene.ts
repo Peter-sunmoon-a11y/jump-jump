@@ -78,7 +78,7 @@ export class GameScene extends Phaser.Scene {
 
   private createPlatform(index: number) {
     const previous = this.platforms[index - 1];
-    const width = index === 0 ? 76 : Math.round(48 + this.random(index, 1) * 28);
+    const width = index === 0 ? 82 : Math.round(52 + this.random(index, 1) * 30);
     const gap = index === 0 ? 0 : Math.round(28 + Math.min(index, 180) * 0.06 + this.random(index, 2) * 20);
     const x = index === 0 ? 150 : previous.x + previous.width / 2 + gap + width / 2;
     const y = 545 + Math.round((this.random(index, 3) - 0.5) * 32);
@@ -228,7 +228,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     if (this.charging) {
-      this.charge = Math.min(1, this.charge + delta / 1550);
+      this.charge = Math.min(1, this.charge + delta / 1800);
       this.chargeBar.width = 272 * this.charge;
       this.chargeBar.fillColor = this.charge > 0.78 ? 0xffd45e : 0x69e3c6;
     }
@@ -252,17 +252,19 @@ export class GameScene extends Phaser.Scene {
     const left = target.x - target.width / 2;
     const right = target.x + target.width / 2;
     const overlap = Math.min(heroCenter + 7, right) - Math.max(heroCenter - 7, left);
-    const centerInside = heroCenter > left && heroCenter < right;
-    const edgeDepth = Math.min(heroCenter - left, right - heroCenter);
-    if (overlap > 0 && centerInside && edgeDepth >= 4) {
+    const withinAssistRange = heroCenter >= left - 5 && heroCenter <= right + 5;
+    const landingX = Phaser.Math.Clamp(heroCenter, left + 3, right - 3);
+    const edgeDepth = Math.min(landingX - left, right - landingX);
+    const assisted = heroCenter !== landingX;
+    if (overlap >= 3 && withinAssistRange) {
       this.current += 1;
       while (this.platforms.length <= this.current + 24) this.createPlatform(this.platforms.length);
-      this.hero.setPosition(heroCenter, target.y - 19);
-      this.shadow.setPosition(heroCenter, target.y - 2).setScale(1).setAlpha(0.28);
+      this.hero.setPosition(landingX, target.y - 19);
+      this.shadow.setPosition(landingX, target.y - 2).setScale(1).setAlpha(0.28);
       this.stable = true;
       this.charge = 0;
       this.chargeBar.width = 0;
-      this.landBurst(edgeDepth < 9);
+      this.landBurst(edgeDepth < 9 || assisted);
       const reward = this.practice ? practiceReward(this.current, this.seed) : (defaultReward(this.current) ?? surpriseReward(this.current, this.seed));
       if (reward) {
         this.rewards.push(reward);
@@ -274,7 +276,7 @@ export class GameScene extends Phaser.Scene {
         this.bridge.onExtensionGate(this.current);
       } else {
         const practiceCheers = ['太稳啦！', '手感火热！', '漂亮起飞！', '星光为你亮起！', '完美节奏！'];
-        this.hint.setText(this.practice ? practiceCheers[this.current % practiceCheers.length] : edgeDepth < 9 ? '惊险站稳！继续保持' : this.current % 10 === 0 ? '奖励已锁定 ✦' : '漂亮！继续向前').setVisible(true);
+        this.hint.setText(this.practice ? practiceCheers[this.current % practiceCheers.length] : edgeDepth < 9 || assisted ? '惊险站稳！继续保持' : this.current % 10 === 0 ? '奖励已锁定 ✦' : '漂亮！继续向前').setVisible(true);
         this.time.delayedCall(900, () => this.hint.setVisible(false));
       }
     } else {
