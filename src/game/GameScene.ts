@@ -165,9 +165,12 @@ export class GameScene extends Phaser.Scene {
     }
     const platform: PlatformData = { index, x, y, width, height: surfaceHeight, landingHalfWidth, kind, top, face };
     if (checkpoint) {
-      platform.label = this.add.text(x, y - 2, index > 100 ? '?' : `$${(index / 100).toFixed(2)}`, {
-        fontFamily: 'monospace', fontSize: '13px', color: '#4f3518', fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(5);
+      const badgeY = y - surfaceHeight / 2 - 18;
+      this.add.rectangle(x, badgeY + 14, 3, 14, 0xffeea5, 0.72).setDepth(17);
+      platform.label = this.add.text(x, badgeY, index > 100 ? '✦ 惊喜 ?' : `✦ ${(index / 100).toFixed(2)} USDT`, {
+        fontFamily: 'monospace', fontSize: '12px', color: '#fff3ae', fontStyle: 'bold',
+        backgroundColor: '#171a37ee', padding: { x: 7, y: 5 },
+      }).setOrigin(0.5).setDepth(18);
     }
     this.platforms.push(platform);
   }
