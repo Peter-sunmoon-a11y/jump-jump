@@ -83,10 +83,27 @@ export class GameScene extends Phaser.Scene {
     const x = index === 0 ? 150 : previous.x + previous.width / 2 + gap + width / 2;
     const y = 545 + Math.round((this.random(index, 3) - 0.5) * 32);
     const checkpoint = index > 0 && index % 10 === 0;
-    const topColor = checkpoint ? 0xffd45e : index > 100 ? 0x8c7cf7 : 0x66d9c2;
-    const faceColor = checkpoint ? 0xc6823e : index > 100 ? 0x5945bd : 0x338c87;
+    const skyPalettes = [
+      { top: 0x66d9c2, face: 0x338c87, edge: 0xb4fff0 },
+      { top: 0x71b9f4, face: 0x3c72b0, edge: 0xc5e8ff },
+      { top: 0xff8fba, face: 0xb94f80, edge: 0xffd1e3 },
+      { top: 0xffad68, face: 0xbd663f, edge: 0xffddad },
+      { top: 0xa88cf2, face: 0x6953b8, edge: 0xded2ff },
+      { top: 0x92d36e, face: 0x548a4c, edge: 0xd8ffc3 },
+    ];
+    const dreamPalettes = [
+      { top: 0x8c7cf7, face: 0x5945bd, edge: 0xd8d1ff },
+      { top: 0xe778d5, face: 0x9b438f, edge: 0xffcef7 },
+      { top: 0x55d6ed, face: 0x2d829f, edge: 0xc6f7ff },
+      { top: 0xff7597, face: 0xb34268, edge: 0xffccdb },
+    ];
+    const palettes = index > 100 ? dreamPalettes : skyPalettes;
+    const palette = palettes[Math.floor(this.random(index, 7) * palettes.length) % palettes.length];
+    const topColor = checkpoint ? 0xffd45e : palette.top;
+    const faceColor = checkpoint ? 0xc6823e : palette.face;
+    const edgeColor = checkpoint ? 0xffeea5 : palette.edge;
     const face = this.add.polygon(x, y + 14, [0, 0, width / 2, 18, width / 2, 44, 0, 27, -width / 2, 44, -width / 2, 18], faceColor).setDepth(2);
-    const top = this.add.rectangle(x, y, width, 31, topColor).setStrokeStyle(3, checkpoint ? 0xffeea5 : 0xb4fff0).setDepth(3);
+    const top = this.add.rectangle(x, y, width, 31, topColor).setStrokeStyle(3, edgeColor).setDepth(3);
     this.add.rectangle(x - width / 2 + 5, y + 20, 6, 23, 0xffffff, 0.11).setDepth(4);
     const platform: PlatformData = { index, x, y, width, top, face };
     if (checkpoint) {
