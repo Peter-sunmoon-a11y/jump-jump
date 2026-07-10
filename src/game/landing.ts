@@ -1,4 +1,4 @@
-export const LANDING_EDGE_MARGIN = 7;
+export const LANDING_EDGE_MARGIN = 3;
 
 export function getLandingZone(platformX: number, platformWidth: number, edgeMargin = LANDING_EDGE_MARGIN) {
   const margin = Math.min(edgeMargin, Math.max(0, platformWidth / 2 - 1));

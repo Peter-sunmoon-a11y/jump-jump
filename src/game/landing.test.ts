@@ -11,9 +11,11 @@ describe('landing zone', () => {
 
   it('rejects only the edges and points outside the platform', () => {
     expect(isSafeLanding(70, 100, 60)).toBe(false);
-    expect(isSafeLanding(75, 100, 60)).toBe(false);
+    expect(isSafeLanding(71, 100, 60)).toBe(false);
+    expect(isSafeLanding(75, 100, 60)).toBe(true);
     expect(isSafeLanding(100, 100, 60)).toBe(true);
-    expect(isSafeLanding(125, 100, 60)).toBe(false);
+    expect(isSafeLanding(125, 100, 60)).toBe(true);
+    expect(isSafeLanding(129, 100, 60)).toBe(false);
     expect(isSafeLanding(130, 100, 60)).toBe(false);
   });
 });
