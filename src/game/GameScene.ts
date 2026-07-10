@@ -105,6 +105,7 @@ export class GameScene extends Phaser.Scene {
     const shapeKind = checkpoint ? 4 : Math.floor(this.random(index, 11) * 4);
     const half = width / 2;
     const topHalf = 15;
+    const depthBoost = Math.round(this.random(index, 13) * 20);
     const chamfer = shapeKind === 1 ? 9 : shapeKind === 2 ? 5 : 2;
     const topPoints = [
       -half + chamfer, -topHalf, half - chamfer, -topHalf,
@@ -113,28 +114,35 @@ export class GameScene extends Phaser.Scene {
       -half, topHalf - chamfer, -half, -topHalf + chamfer,
     ];
     const facePointsByKind = [
-      [0, 0, half, 16, half, 43, 0, 28, -half, 43, -half, 16],
-      [0, 0, half, 16, half - 8, 39, 12, 31, 0, 48, -12, 31, -half + 8, 39, -half, 16],
-      [0, 0, half, 16, half - 10, 30, half - 2, 38, 10, 32, 0, 47, -10, 32, -half + 2, 38, -half + 10, 30, -half, 16],
-      [0, 0, half, 16, half - 5, 32, 18, 29, 9, 52, 0, 42, -9, 52, -18, 29, -half + 5, 32, -half, 16],
-      [0, 0, half, 16, half - 4, 42, 15, 35, 0, 52, -15, 35, -half + 4, 42, -half, 16],
+      [0, 0, half, 16, half, 48 + depthBoost, half * 0.48, 42 + depthBoost, 0, 61 + depthBoost, -half * 0.48, 42 + depthBoost, -half, 48 + depthBoost, -half, 16],
+      [0, 0, half, 16, half - 8, 45 + depthBoost, 15, 38 + depthBoost, 6, 68 + depthBoost, 0, 82 + depthBoost, -6, 68 + depthBoost, -15, 38 + depthBoost, -half + 8, 45 + depthBoost, -half, 16],
+      [0, 0, half, 16, half - 7, 31, half, 43, half - 15, 43, half - 15, 57 + depthBoost, 18, 57 + depthBoost, 18, 70 + depthBoost, 0, 88 + depthBoost, -18, 70 + depthBoost, -18, 57 + depthBoost, -half + 15, 57 + depthBoost, -half + 15, 43, -half, 43, -half + 7, 31, -half, 16],
+      [0, 0, half, 16, half - 5, 39, 22, 34, 15, 58 + depthBoost, 8, 49 + depthBoost, 0, 94 + depthBoost, -8, 49 + depthBoost, -15, 58 + depthBoost, -22, 34, -half + 5, 39, -half, 16],
+      [0, 0, half, 16, half - 4, 51 + depthBoost, 19, 43 + depthBoost, 10, 65 + depthBoost, 0, 78 + depthBoost, -10, 65 + depthBoost, -19, 43 + depthBoost, -half + 4, 51 + depthBoost, -half, 16],
     ];
     const face = this.add.polygon(x, y + 14, facePointsByKind[shapeKind], faceColor).setDepth(2);
     const top = this.add.polygon(x, y, topPoints, topColor).setStrokeStyle(3, edgeColor).setDepth(3);
     if (shapeKind === 0) {
       this.add.rectangle(x - half + 7, y + 21, 6, 22, 0xffffff, 0.12).setDepth(4);
+      this.add.rectangle(x, y + 57 + depthBoost, Math.max(12, width * 0.34), 5, edgeColor, 0.19).setDepth(4);
     } else if (shapeKind === 1) {
       this.add.rectangle(x, y + 22, Math.max(18, width - 30), 4, edgeColor, 0.24).setDepth(4);
       this.add.rectangle(x, y + 35, Math.max(10, width - 48), 3, 0xffffff, 0.1).setDepth(4);
+      this.add.rectangle(x, y + 77 + depthBoost, 9, 15, edgeColor, 0.3).setDepth(4).setAngle(45);
     } else if (shapeKind === 2) {
       for (const offset of [-half + 13, half - 13]) this.add.rectangle(x + offset, y + 22, 8, 8, edgeColor, 0.28).setDepth(4).setAngle(45);
+      this.add.rectangle(x, y + 78 + depthBoost, 18, 5, edgeColor, 0.22).setDepth(4);
     } else if (shapeKind === 3) {
       this.add.rectangle(x, y + 39, 8, 12, edgeColor, 0.28).setDepth(4).setAngle(45);
       this.add.rectangle(x - 20, y + 29, 5, 5, 0xffffff, 0.14).setDepth(4);
       this.add.rectangle(x + 21, y + 31, 4, 4, 0xffffff, 0.14).setDepth(4);
+      for (const [offset, size] of [[-28, 7], [25, 5], [-14, 4]] as const) {
+        this.add.rectangle(x + offset, y + 64 + depthBoost + Math.abs(offset) * 0.25, size, size, edgeColor, 0.24).setDepth(4).setAngle(45);
+      }
     } else {
       this.add.rectangle(x, y + 29, Math.max(20, width - 34), 5, 0xffeea5, 0.34).setDepth(4);
       this.add.star(x, y - 2, 4, 5, 10, 0xfff4bd).setStrokeStyle(2, 0xb76d35).setDepth(5);
+      this.add.star(x, y + 65 + depthBoost, 4, 5, 11, 0xffeea5, 0.32).setDepth(4);
     }
     const platform: PlatformData = { index, x, y, width, top, face };
     if (checkpoint) {
