@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateXp, defaultReward, medalForXp, surpriseReward } from './rules';
+import { calculateXp, defaultReward, medalForXp, practiceReward, surpriseReward } from './rules';
 
 describe('reward rules', () => {
   it('only rewards every tenth default block', () => {
@@ -35,5 +35,12 @@ describe('reward rules', () => {
   it('keeps surprise generation deterministic for server replay', () => {
     expect(surpriseReward(110, 98765)).toEqual(surpriseReward(110, 98765));
     expect(surpriseReward(120, 98765)).toEqual(surpriseReward(120, 98765));
+  });
+
+  it('gives a deterministic preview reward on every practice block', () => {
+    const rewards = Array.from({ length: 20 }, (_, index) => practiceReward(index + 1, 1234));
+    expect(rewards).toHaveLength(20);
+    expect(rewards.every((reward, index) => reward.block === index + 1)).toBe(true);
+    expect(practiceReward(7, 1234)).toEqual(practiceReward(7, 1234));
   });
 });

@@ -85,7 +85,7 @@ export function App() {
 
   function onReward(reward: RewardHit) {
     gameAudio.play('reward', settings.sound);
-    showToast(`✦ ${reward.label} 已锁定`);
+    showToast(practice ? `✦ ${reward.label} · 训练预览` : `✦ ${reward.label} 已锁定`);
     if (settings.vibration && navigator.vibrate) navigator.vibrate([18, 35, 24]);
   }
 
@@ -94,7 +94,7 @@ export function App() {
     snapshotRef.current = next;
     setSnapshot(next);
     if (round) void mockPlatform.updateRound(round.roundId, next).catch(() => showToast('局次同步暂时中断'));
-    if (practice && next.block >= 8 && next.stable) void finishRound('completed');
+    if (practice && next.block >= 20 && next.stable) void finishRound('completed');
   }
 
   async function finishRound(reason: RoundResult['reason']) {
@@ -105,7 +105,7 @@ export function App() {
     const current = gameRef.current?.snapshot() ?? snapshotRef.current;
     if (practice) {
       await mockPlatform.discardRound(round.roundId);
-      setResult({ roundId: round.roundId, block: current.block, reason, rewards: [], baseUsdt: 0, bonusUsdt: 0, xpEarned: 0, startedAt: round.startedAt });
+      setResult({ roundId: round.roundId, block: current.block, reason, rewards: current.rewards, baseUsdt: 0, bonusUsdt: 0, xpEarned: 0, startedAt: round.startedAt });
       setScreen('results');
       return;
     }
@@ -161,10 +161,10 @@ export function App() {
             <div className="game-topbar">
               <button className="icon-button" onClick={() => setSettingsOpen(true)} aria-label="设置">⚙</button>
               <div className="block-counter"><small>当前</small><strong>{snapshot.block}</strong><span>格</span></div>
-              <div className="locked-reward"><small>已锁定</small><strong>{snapshot.rewards.filter((r) => r.kind === 'usdt').reduce((s, r) => s + r.value, 0).toFixed(2)}</strong><span>USDT</span></div>
+              <div className="locked-reward"><small>{practice ? '练习惊喜' : '已锁定'}</small><strong>{practice ? snapshot.rewards.length : snapshot.rewards.filter((r) => r.kind === 'usdt').reduce((s, r) => s + r.value, 0).toFixed(2)}</strong><span>{practice ? '份' : 'USDT'}</span></div>
             </div>
             {snapshot.stable && snapshot.block > 0 && <button className="cashout-button" onClick={() => finishRound('cashout')}>结束并结算</button>}
-            {practice && <div className="practice-tag">练习模式 · {Math.min(snapshot.block, 8)}/8</div>}
+            {practice && <div className="practice-tag">惊喜训练 · {Math.min(snapshot.block, 20)}/20</div>}
           </section>
         )}
         {screen === 'results' && result && <Results result={result} practice={practice} medal={medal} onAgain={() => startGame(practice)} onHome={returnHome} busy={busy} />}

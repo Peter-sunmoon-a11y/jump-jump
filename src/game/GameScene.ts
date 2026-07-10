@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { defaultReward, surpriseReward } from './rules';
+import { defaultReward, practiceReward, surpriseReward } from './rules';
 import type { GameBridgeEvents, Quality, RewardHit } from './types';
 
 type PlatformData = { index: number; x: number; y: number; width: number; top: Phaser.GameObjects.Shape; face: Phaser.GameObjects.Shape; label?: Phaser.GameObjects.Text };
@@ -245,7 +245,7 @@ export class GameScene extends Phaser.Scene {
       this.charge = 0;
       this.chargeBar.width = 0;
       this.landBurst(edgeDepth < 11);
-      const reward = this.practice ? null : (defaultReward(this.current) ?? surpriseReward(this.current, this.seed));
+      const reward = this.practice ? practiceReward(this.current, this.seed) : (defaultReward(this.current) ?? surpriseReward(this.current, this.seed));
       if (reward) {
         this.rewards.push(reward);
         this.bridge.onReward(reward);
@@ -255,7 +255,8 @@ export class GameScene extends Phaser.Scene {
         this.stable = false;
         this.bridge.onExtensionGate(this.current);
       } else {
-        this.hint.setText(edgeDepth < 11 ? '惊险站稳！继续保持' : this.current % 10 === 0 ? '奖励已锁定 ✦' : '漂亮！继续向前').setVisible(true);
+        const practiceCheers = ['太稳啦！', '手感火热！', '漂亮起飞！', '星光为你亮起！', '完美节奏！'];
+        this.hint.setText(this.practice ? practiceCheers[this.current % practiceCheers.length] : edgeDepth < 11 ? '惊险站稳！继续保持' : this.current % 10 === 0 ? '奖励已锁定 ✦' : '漂亮！继续向前').setVisible(true);
         this.time.delayedCall(900, () => this.hint.setVisible(false));
       }
     } else {
@@ -264,7 +265,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private landBurst(edge: boolean) {
-    const count = this.reducedMotion ? 0 : this.quality === 'smooth' ? 4 : this.quality === 'high' ? 14 : 8;
+    const baseCount = this.quality === 'smooth' ? 4 : this.quality === 'high' ? 14 : 8;
+    const count = this.reducedMotion ? 0 : this.practice ? Math.min(18, baseCount + 5) : baseCount;
     for (let i = 0; i < count; i++) {
       const p = this.add.rectangle(this.hero.x, this.hero.y + 20, 5, 5, edge ? 0xffd45e : 0x9fffe9).setDepth(14);
       this.particles.push(p);

@@ -37,6 +37,21 @@ export function surpriseReward(block: number, seed: number): RewardHit | null {
   return { block, kind: 'free-extension', value: 10, label: '免费续跳 10 格' };
 }
 
+export function practiceReward(block: number, seed: number): RewardHit {
+  const roll = Math.abs((seed * 7919 + block * 104729) % 8);
+  const rewards: RewardHit[] = [
+    { block, kind: 'usdt', value: 0.01, label: '练习惊喜 · 0.01 USDT' },
+    { block, kind: 'usdt', value: 0.05, label: '练习暴击 · 0.05 USDT' },
+    { block, kind: 'play', value: 1, label: '幸运 Play ×1' },
+    { block, kind: 'coupon', value: 10, label: '续跳 9 折券' },
+    { block, kind: 'free-extension', value: 10, label: '免费续跳 10 格' },
+    { block, kind: 'usdt', value: 0.08, label: '星光宝箱 · 0.08 USDT' },
+    { block, kind: 'coupon', value: 20, label: '稀有续跳 8 折券' },
+    { block, kind: 'play', value: 2, label: '超级幸运 Play ×2' },
+  ];
+  return { ...rewards[roll], block };
+}
+
 export function calculateXp(block: number, rewards: RewardHit[]) {
   const rewardXp = rewards.reduce((sum, reward) => {
     if (reward.kind === 'usdt') return sum + Math.round(reward.value * 100);
