@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
 import { defaultReward, practiceReward, surpriseReward } from './rules';
+import { getLandingZone, isSafeLanding } from './landing';
 import type { GameBridgeEvents, Quality, RewardHit } from './types';
 
 type SurfaceKind = 'rectangle' | 'ellipse';
-type PlatformData = { index: number; x: number; y: number; width: number; height: number; landingHalfWidth: number; kind: SurfaceKind; top: Phaser.GameObjects.Shape; face: Phaser.GameObjects.Shape; label?: Phaser.GameObjects.Text };
+type PlatformData = { index: number; x: number; y: number; width: number; height: number; kind: SurfaceKind; top: Phaser.GameObjects.Shape; face: Phaser.GameObjects.Shape; label?: Phaser.GameObjects.Text };
 
 export class GameScene extends Phaser.Scene {
   private bridge: GameBridgeEvents;
@@ -138,9 +139,6 @@ export class GameScene extends Phaser.Scene {
     if (kind === 'ellipse') top = this.add.ellipse(x, y, width, surfaceHeight, topColor);
     else top = this.add.rectangle(x, y, width, surfaceHeight, topColor);
     top.setStrokeStyle(3, edgeColor).setDepth(3);
-    const footHalfWidth = 7;
-    const visibleHalfWidthAtFeet = width / 2;
-    const landingHalfWidth = Math.max(12, visibleHalfWidthAtFeet - footHalfWidth);
     if (shapeKind === 0) {
       this.add.rectangle(x - half + 7, y + 21, 6, 22, 0xffffff, 0.12).setDepth(4);
       this.add.rectangle(x, y + 57 + depthBoost, Math.max(12, width * 0.34), 5, edgeColor, 0.19).setDepth(4);
@@ -163,7 +161,7 @@ export class GameScene extends Phaser.Scene {
       this.add.star(x, y - 2, 4, 5, 10, 0xfff4bd).setStrokeStyle(2, 0xb76d35).setDepth(5);
       this.add.star(x, y + 65 + depthBoost, 4, 5, 11, 0xffeea5, 0.32).setDepth(4);
     }
-    const platform: PlatformData = { index, x, y, width, height: surfaceHeight, landingHalfWidth, kind, top, face };
+    const platform: PlatformData = { index, x, y, width, height: surfaceHeight, kind, top, face };
     if (checkpoint) {
       const badgeY = y - surfaceHeight / 2 - 18;
       this.add.rectangle(x, badgeY + 14, 3, 14, 0xffeea5, 0.72).setDepth(17);
@@ -254,9 +252,8 @@ export class GameScene extends Phaser.Scene {
     this.hero.angle = 0;
     const target = this.platforms[this.current + 1];
     const heroCenter = this.hero.x;
-    const left = target.x - target.landingHalfWidth;
-    const right = target.x + target.landingHalfWidth;
-    const centerInside = heroCenter >= left && heroCenter <= right;
+    const { left, right } = getLandingZone(target.x, target.width);
+    const centerInside = isSafeLanding(heroCenter, target.x, target.width);
     const landingX = heroCenter;
     const edgeDepth = Math.min(heroCenter - left, right - heroCenter);
     const nearShapeEdge = edgeDepth < 4;
