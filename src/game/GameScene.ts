@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { defaultReward, surpriseReward } from './rules';
 import type { GameBridgeEvents, Quality, RewardHit } from './types';
 
-type PlatformData = { index: number; x: number; y: number; width: number; top: Phaser.GameObjects.Rectangle; face: Phaser.GameObjects.Polygon; label?: Phaser.GameObjects.Text };
+type PlatformData = { index: number; x: number; y: number; width: number; top: Phaser.GameObjects.Shape; face: Phaser.GameObjects.Shape; label?: Phaser.GameObjects.Text };
 
 export class GameScene extends Phaser.Scene {
   private bridge: GameBridgeEvents;
@@ -102,9 +102,40 @@ export class GameScene extends Phaser.Scene {
     const topColor = checkpoint ? 0xffd45e : palette.top;
     const faceColor = checkpoint ? 0xc6823e : palette.face;
     const edgeColor = checkpoint ? 0xffeea5 : palette.edge;
-    const face = this.add.polygon(x, y + 14, [0, 0, width / 2, 18, width / 2, 44, 0, 27, -width / 2, 44, -width / 2, 18], faceColor).setDepth(2);
-    const top = this.add.rectangle(x, y, width, 31, topColor).setStrokeStyle(3, edgeColor).setDepth(3);
-    this.add.rectangle(x - width / 2 + 5, y + 20, 6, 23, 0xffffff, 0.11).setDepth(4);
+    const shapeKind = checkpoint ? 4 : Math.floor(this.random(index, 11) * 4);
+    const half = width / 2;
+    const topHalf = 15;
+    const chamfer = shapeKind === 1 ? 9 : shapeKind === 2 ? 5 : 2;
+    const topPoints = [
+      -half + chamfer, -topHalf, half - chamfer, -topHalf,
+      half, -topHalf + chamfer, half, topHalf - chamfer,
+      half - chamfer, topHalf, -half + chamfer, topHalf,
+      -half, topHalf - chamfer, -half, -topHalf + chamfer,
+    ];
+    const facePointsByKind = [
+      [0, 0, half, 16, half, 43, 0, 28, -half, 43, -half, 16],
+      [0, 0, half, 16, half - 8, 39, 12, 31, 0, 48, -12, 31, -half + 8, 39, -half, 16],
+      [0, 0, half, 16, half - 10, 30, half - 2, 38, 10, 32, 0, 47, -10, 32, -half + 2, 38, -half + 10, 30, -half, 16],
+      [0, 0, half, 16, half - 5, 32, 18, 29, 9, 52, 0, 42, -9, 52, -18, 29, -half + 5, 32, -half, 16],
+      [0, 0, half, 16, half - 4, 42, 15, 35, 0, 52, -15, 35, -half + 4, 42, -half, 16],
+    ];
+    const face = this.add.polygon(x, y + 14, facePointsByKind[shapeKind], faceColor).setDepth(2);
+    const top = this.add.polygon(x, y, topPoints, topColor).setStrokeStyle(3, edgeColor).setDepth(3);
+    if (shapeKind === 0) {
+      this.add.rectangle(x - half + 7, y + 21, 6, 22, 0xffffff, 0.12).setDepth(4);
+    } else if (shapeKind === 1) {
+      this.add.rectangle(x, y + 22, Math.max(18, width - 30), 4, edgeColor, 0.24).setDepth(4);
+      this.add.rectangle(x, y + 35, Math.max(10, width - 48), 3, 0xffffff, 0.1).setDepth(4);
+    } else if (shapeKind === 2) {
+      for (const offset of [-half + 13, half - 13]) this.add.rectangle(x + offset, y + 22, 8, 8, edgeColor, 0.28).setDepth(4).setAngle(45);
+    } else if (shapeKind === 3) {
+      this.add.rectangle(x, y + 39, 8, 12, edgeColor, 0.28).setDepth(4).setAngle(45);
+      this.add.rectangle(x - 20, y + 29, 5, 5, 0xffffff, 0.14).setDepth(4);
+      this.add.rectangle(x + 21, y + 31, 4, 4, 0xffffff, 0.14).setDepth(4);
+    } else {
+      this.add.rectangle(x, y + 29, Math.max(20, width - 34), 5, 0xffeea5, 0.34).setDepth(4);
+      this.add.star(x, y - 2, 4, 5, 10, 0xfff4bd).setStrokeStyle(2, 0xb76d35).setDepth(5);
+    }
     const platform: PlatformData = { index, x, y, width, top, face };
     if (checkpoint) {
       platform.label = this.add.text(x, y - 2, index > 100 ? '?' : `$${(index / 100).toFixed(2)}`, {
