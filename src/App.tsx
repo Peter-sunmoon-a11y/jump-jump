@@ -163,6 +163,7 @@ export function App() {
               <div className="block-counter"><small>当前</small><strong>{snapshot.block}</strong><span>格</span></div>
               <div className="locked-reward"><small>{practice ? '练习惊喜' : '已锁定'}</small><strong>{practice ? snapshot.rewards.length : snapshot.rewards.filter((r) => r.kind === 'usdt').reduce((s, r) => s + r.value, 0).toFixed(2)}</strong><span>{practice ? '份' : 'USDT'}</span></div>
             </div>
+            <RewardDistance block={snapshot.block} practice={practice} />
             {snapshot.stable && snapshot.block > 0 && <button className="cashout-button" onClick={() => finishRound('cashout')}>结束并结算</button>}
             {practice && <div className="practice-tag">惊喜训练 · {Math.min(snapshot.block, 20)}/20</div>}
           </section>
@@ -180,6 +181,20 @@ export function App() {
       </main>
     </div>
   );
+}
+
+function RewardDistance({ block, practice }: { block: number; practice: boolean }) {
+  if (practice) return <div className="reward-distance practice-distance">✦ 每一格都有惊喜</div>;
+  const nextReward = Math.ceil((block + 1) / 10) * 10;
+  const distance = nextReward - block;
+  const message = distance === 1
+    ? '下一格就是奖励跳台！'
+    : distance <= 3
+      ? `就差 ${distance} 格，奖励在发光！`
+      : distance <= 5
+        ? `再稳稳跳 ${distance} 格，就能锁定奖励`
+        : `距离奖励跳台还有 ${distance} 格`;
+  return <div className={`reward-distance ${distance <= 3 ? 'near' : ''}`}>✦ {message}</div>;
 }
 
 function Home({ profile, onStart, onPractice, onSettings, onRecharge, onBuyPlay, onRanking, onRecords, busy }: { profile: PlayerProfile; onStart(): void; onPractice(): void; onSettings(): void; onRecharge(): void; onBuyPlay(): void; onRanking(): void; onRecords(): void; busy: boolean }) {
