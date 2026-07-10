@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { defaultReward, practiceReward, surpriseReward } from './rules';
 import type { GameBridgeEvents, Quality, RewardHit } from './types';
 
-type SurfaceKind = 'rectangle' | 'circle' | 'diamond' | 'triangle' | 'ellipse';
+type SurfaceKind = 'rectangle' | 'circle' | 'triangle' | 'ellipse';
 type PlatformData = { index: number; x: number; y: number; width: number; height: number; landingHalfWidth: number; kind: SurfaceKind; top: Phaser.GameObjects.Shape; face: Phaser.GameObjects.Shape; label?: Phaser.GameObjects.Text };
 
 export class GameScene extends Phaser.Scene {
@@ -103,9 +103,9 @@ export class GameScene extends Phaser.Scene {
     const faceColor = checkpoint ? 0xc6823e : palette.face;
     const edgeColor = checkpoint ? 0xffeea5 : palette.edge;
     const shapeKind = checkpoint ? 4 : Math.floor(this.random(index, 11) * 4);
-    const surfaceKinds: SurfaceKind[] = ['rectangle', 'circle', 'diamond', 'triangle', 'ellipse'];
+    const surfaceKinds: SurfaceKind[] = ['rectangle', 'circle', 'triangle', 'ellipse'];
     let kind = index === 0 ? 'rectangle' : surfaceKinds[Math.floor(this.random(index, 19) * surfaceKinds.length) % surfaceKinds.length];
-    if (kind === 'triangle' && width < 68) kind = 'ellipse';
+    if (kind === 'triangle' && width < 80) kind = 'ellipse';
     const half = width / 2;
     const surfaceHeight = kind === 'circle' ? width : kind === 'ellipse' ? Math.round(width * 0.52) : kind === 'triangle' ? Math.round(width * 0.62) : 30;
     const topHalf = surfaceHeight / 2;
@@ -137,11 +137,12 @@ export class GameScene extends Phaser.Scene {
     this.add.rectangle(x, y + 63 + depthBoost, 13, 13, edgeColor, 0.48).setAngle(45).setStrokeStyle(2, 0xffffff, 0.18).setDepth(3);
     let top: Phaser.GameObjects.Shape;
     if (kind === 'circle' || kind === 'ellipse') top = this.add.ellipse(x, y, width, surfaceHeight, topColor);
-    else if (kind === 'diamond') top = this.add.polygon(x, y, [0, -topHalf, half, 0, 0, topHalf, -half, 0], topColor);
     else if (kind === 'triangle') top = this.add.triangle(x, y, -half, topHalf, half, topHalf, 0, -topHalf, topColor);
     else top = this.add.rectangle(x, y, width, surfaceHeight, topColor);
     top.setStrokeStyle(3, edgeColor).setDepth(3);
-    const landingHalfWidth = kind === 'triangle' ? width * 0.2 : kind === 'diamond' ? width * 0.42 : kind === 'circle' || kind === 'ellipse' ? width * 0.46 : width / 2;
+    const footHalfWidth = 7;
+    const visibleHalfWidthAtFeet = kind === 'triangle' ? width / 4 : width / 2;
+    const landingHalfWidth = Math.max(12, visibleHalfWidthAtFeet - footHalfWidth);
     if (shapeKind === 0) {
       this.add.rectangle(x - half + 7, y + 21, 6, 22, 0xffffff, 0.12).setDepth(4);
       this.add.rectangle(x, y + 57 + depthBoost, Math.max(12, width * 0.34), 5, edgeColor, 0.19).setDepth(4);
@@ -255,10 +256,8 @@ export class GameScene extends Phaser.Scene {
     this.hero.angle = 0;
     const target = this.platforms[this.current + 1];
     const heroCenter = this.hero.x;
-    const footHalfWidth = 7;
-    const safeHalfWidth = Math.max(1, target.landingHalfWidth - footHalfWidth);
-    const left = target.x - safeHalfWidth;
-    const right = target.x + safeHalfWidth;
+    const left = target.x - target.landingHalfWidth;
+    const right = target.x + target.landingHalfWidth;
     const centerInside = heroCenter >= left && heroCenter <= right;
     const landingX = heroCenter;
     const edgeDepth = Math.min(heroCenter - left, right - heroCenter);
