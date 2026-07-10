@@ -85,6 +85,7 @@ export class GameScene extends Phaser.Scene {
     const x = index === 0 ? 150 : previous.x + previous.width / 2 + gap + width / 2;
     const y = index === 0 ? 545 : 535 + Math.round((this.random(index, 3) - 0.5) * 150);
     const checkpoint = index > 0 && index % 10 === 0;
+    const practiceRewardNode = this.practice && index > 0 && index <= 20;
     const skyPalettes = [
       { top: 0x66d9c2, face: 0x338c87, edge: 0xb4fff0 },
       { top: 0x71b9f4, face: 0x3c72b0, edge: 0xc5e8ff },
@@ -103,7 +104,7 @@ export class GameScene extends Phaser.Scene {
     const palette = palettes[Math.floor(this.random(index, 7) * palettes.length) % palettes.length];
     const topColor = checkpoint ? 0xffd45e : palette.top;
     const faceColor = checkpoint ? 0xc6823e : palette.face;
-    const edgeColor = checkpoint ? 0xffeea5 : palette.edge;
+    const edgeColor = checkpoint || practiceRewardNode ? 0xffeea5 : palette.edge;
     const shapeKind = checkpoint ? 4 : Math.floor(this.random(index, 11) * 4);
     const surfaceKinds: SurfaceKind[] = ['rectangle', 'ellipse'];
     let kind = index === 0 ? 'rectangle' : surfaceKinds[Math.floor(this.random(index, 19) * surfaceKinds.length) % surfaceKinds.length];
@@ -163,10 +164,11 @@ export class GameScene extends Phaser.Scene {
       this.add.star(x, y + 65 + depthBoost, 4, 5, 11, 0xffeea5, 0.32).setDepth(4);
     }
     const platform: PlatformData = { index, x, y, width, height: surfaceHeight, kind, top, face };
-    if (checkpoint) {
+    if (checkpoint || practiceRewardNode) {
       const badgeY = y - surfaceHeight / 2 - 18;
       this.add.rectangle(x, badgeY + 14, 3, 14, 0xffeea5, 0.72).setDepth(17);
-      platform.label = this.add.text(x, badgeY, index > 100 ? '✦ 惊喜 ?' : `✦ ${(index / 100).toFixed(2)} USDT`, {
+      const badgeText = practiceRewardNode ? '✦ 奖励' : index > 100 ? '✦ 惊喜 ?' : `✦ ${(index / 100).toFixed(2)} USDT`;
+      platform.label = this.add.text(x, badgeY, badgeText, {
         fontFamily: 'monospace', fontSize: '12px', color: '#fff3ae', fontStyle: 'bold',
         backgroundColor: '#171a37ee', padding: { x: 7, y: 5 },
       }).setOrigin(0.5).setDepth(18);
