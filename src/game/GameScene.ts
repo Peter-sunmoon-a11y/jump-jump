@@ -45,7 +45,7 @@ export class GameScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor('#181b3d');
     this.createSky();
-    for (let i = 0; i <= 110; i++) this.createPlatform(i);
+    for (let i = 0; i <= 24; i++) this.createPlatform(i);
     const start = this.platforms[0];
     this.shadow = this.add.ellipse(start.x, start.y - 2, 27, 8, 0x11152f, 0.28).setDepth(8);
     this.hero = this.createHero(start.x, start.y - 25);
@@ -121,6 +121,23 @@ export class GameScene extends Phaser.Scene {
       [0, 0, half, 16, half - 4, 51 + depthBoost, 19, 43 + depthBoost, 10, 65 + depthBoost, 0, 78 + depthBoost, -10, 65 + depthBoost, -19, 43 + depthBoost, -half + 4, 51 + depthBoost, -half, 16],
     ];
     const face = this.add.polygon(x, y + 14, facePointsByKind[shapeKind], faceColor).setDepth(2);
+    const keelDepth = 92 + depthBoost * 2 + shapeKind * 8;
+    const keelWidth = Math.max(20, width * (shapeKind === 3 ? 0.72 : 0.56));
+    const keelPoints = [
+      -keelWidth / 2, -12, keelWidth / 2, -12,
+      keelWidth * 0.42, 25, keelWidth * 0.24, 48,
+      10, keelDepth * 0.68, 0, keelDepth,
+      -10, keelDepth * 0.68, -keelWidth * 0.24, 48,
+      -keelWidth * 0.42, 25,
+    ];
+    this.add.polygon(x, y + 38, keelPoints, faceColor, 0.78).setStrokeStyle(3, edgeColor, 0.28).setDepth(1);
+    const chainLength = 34 + Math.round(this.random(index, 17) * 42);
+    for (const side of [-1, 1]) {
+      const chainX = x + side * Math.min(half - 10, keelWidth * 0.62);
+      this.add.rectangle(chainX, y + 50 + chainLength / 2, 3, chainLength, edgeColor, 0.28).setDepth(1);
+      this.add.rectangle(chainX, y + 51 + chainLength, 9, 9, edgeColor, 0.5).setAngle(45).setDepth(2);
+    }
+    this.add.rectangle(x, y + 63 + depthBoost, 13, 13, edgeColor, 0.48).setAngle(45).setStrokeStyle(2, 0xffffff, 0.18).setDepth(3);
     const top = this.add.polygon(x, y, topPoints, topColor).setStrokeStyle(3, edgeColor).setDepth(3);
     if (shapeKind === 0) {
       this.add.rectangle(x - half + 7, y + 21, 6, 22, 0xffffff, 0.12).setDepth(4);
@@ -239,6 +256,7 @@ export class GameScene extends Phaser.Scene {
     const edgeDepth = Math.min(heroCenter - left, right - heroCenter);
     if (overlap > 0 && centerInside && edgeDepth >= 5) {
       this.current += 1;
+      while (this.platforms.length <= this.current + 24) this.createPlatform(this.platforms.length);
       this.hero.setPosition(heroCenter, target.y - 25);
       this.shadow.setPosition(heroCenter, target.y - 2).setScale(1).setAlpha(0.28);
       this.stable = true;
