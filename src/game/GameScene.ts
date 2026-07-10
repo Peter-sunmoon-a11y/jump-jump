@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { defaultReward, practiceReward, surpriseReward } from './rules';
 import type { GameBridgeEvents, Quality, RewardHit } from './types';
 
-type PlatformData = { index: number; x: number; y: number; width: number; top: Phaser.GameObjects.Shape; face: Phaser.GameObjects.Shape; label?: Phaser.GameObjects.Text };
+type SurfaceKind = 'rectangle' | 'circle' | 'diamond' | 'triangle' | 'ellipse';
+type PlatformData = { index: number; x: number; y: number; width: number; height: number; landingHalfWidth: number; kind: SurfaceKind; top: Phaser.GameObjects.Shape; face: Phaser.GameObjects.Shape; label?: Phaser.GameObjects.Text };
 
 export class GameScene extends Phaser.Scene {
   private bridge: GameBridgeEvents;
@@ -28,8 +29,6 @@ export class GameScene extends Phaser.Scene {
   private rewards: RewardHit[] = [];
   private gateAt = 100;
   private particles: Phaser.GameObjects.Rectangle[] = [];
-  private chargeBar!: Phaser.GameObjects.Rectangle;
-  private chargeGlow!: Phaser.GameObjects.Rectangle;
   private hint!: Phaser.GameObjects.Text;
 
   constructor(bridge: GameBridgeEvents, seed: number, practice: boolean, quality: Quality, reducedMotion = false, adaptiveQuality = false) {
@@ -48,7 +47,7 @@ export class GameScene extends Phaser.Scene {
     for (let i = 0; i <= 24; i++) this.createPlatform(i);
     const start = this.platforms[0];
     this.shadow = this.add.ellipse(start.x, start.y - 2, 20, 6, 0x11152f, 0.28).setDepth(8);
-    this.hero = this.createHero(start.x, start.y - 19);
+    this.hero = this.createHero(start.x, start.y - 15);
     this.createHud();
     this.cameras.main.startFollow(this.hero, true, 0.08, 0, -140, 0);
     this.input.on('pointerdown', this.onDown, this);
@@ -78,10 +77,11 @@ export class GameScene extends Phaser.Scene {
 
   private createPlatform(index: number) {
     const previous = this.platforms[index - 1];
-    const width = index === 0 ? 82 : Math.round(52 + this.random(index, 1) * 30);
-    const gap = index === 0 ? 0 : Math.round(28 + Math.min(index, 180) * 0.06 + this.random(index, 2) * 20);
+    const sizeRoll = this.random(index, 1);
+    const width = index === 0 ? 88 : sizeRoll < 0.3 ? Math.round(44 + sizeRoll * 36) : sizeRoll > 0.76 ? Math.round(92 + (sizeRoll - 0.76) * 115) : Math.round(58 + sizeRoll * 39);
+    const gap = index === 0 ? 0 : Math.round(22 + Math.min(index, 180) * 0.08 + this.random(index, 2) * 72);
     const x = index === 0 ? 150 : previous.x + previous.width / 2 + gap + width / 2;
-    const y = 545 + Math.round((this.random(index, 3) - 0.5) * 32);
+    const y = index === 0 ? 545 : 535 + Math.round((this.random(index, 3) - 0.5) * 150);
     const checkpoint = index > 0 && index % 10 === 0;
     const skyPalettes = [
       { top: 0x66d9c2, face: 0x338c87, edge: 0xb4fff0 },
@@ -103,8 +103,11 @@ export class GameScene extends Phaser.Scene {
     const faceColor = checkpoint ? 0xc6823e : palette.face;
     const edgeColor = checkpoint ? 0xffeea5 : palette.edge;
     const shapeKind = checkpoint ? 4 : Math.floor(this.random(index, 11) * 4);
+    const surfaceKinds: SurfaceKind[] = ['rectangle', 'circle', 'diamond', 'triangle', 'ellipse'];
+    const kind = index === 0 ? 'rectangle' : surfaceKinds[Math.floor(this.random(index, 19) * surfaceKinds.length) % surfaceKinds.length];
     const half = width / 2;
-    const topHalf = 15;
+    const surfaceHeight = kind === 'circle' ? width : kind === 'ellipse' ? Math.round(width * 0.52) : kind === 'triangle' ? Math.round(width * 0.62) : 30;
+    const topHalf = surfaceHeight / 2;
     const depthBoost = Math.round(this.random(index, 13) * 20);
     const facePointsByKind = [
       [0, 0, half, 16, half, 48 + depthBoost, half * 0.48, 42 + depthBoost, 0, 61 + depthBoost, -half * 0.48, 42 + depthBoost, -half, 48 + depthBoost, -half, 16],
@@ -131,9 +134,13 @@ export class GameScene extends Phaser.Scene {
       this.add.rectangle(chainX, y + 51 + chainLength, 9, 9, edgeColor, 0.5).setAngle(45).setDepth(2);
     }
     this.add.rectangle(x, y + 63 + depthBoost, 13, 13, edgeColor, 0.48).setAngle(45).setStrokeStyle(2, 0xffffff, 0.18).setDepth(3);
-    // The playable landing surface always matches the logical collision width.
-    // Shape variation is deliberately restricted to the non-playable structure below it.
-    const top = this.add.rectangle(x, y, width, topHalf * 2, topColor).setStrokeStyle(3, edgeColor).setDepth(3);
+    let top: Phaser.GameObjects.Shape;
+    if (kind === 'circle' || kind === 'ellipse') top = this.add.ellipse(x, y, width, surfaceHeight, topColor);
+    else if (kind === 'diamond') top = this.add.polygon(x, y, [0, -topHalf, half, 0, 0, topHalf, -half, 0], topColor);
+    else if (kind === 'triangle') top = this.add.triangle(x, y, 0, topHalf, half, topHalf, half, -topHalf, topColor);
+    else top = this.add.rectangle(x, y, width, surfaceHeight, topColor);
+    top.setStrokeStyle(3, edgeColor).setDepth(3);
+    const landingHalfWidth = Math.max(12, kind === 'triangle' ? width * 0.34 : kind === 'diamond' ? width * 0.38 : width / 2);
     if (shapeKind === 0) {
       this.add.rectangle(x - half + 7, y + 21, 6, 22, 0xffffff, 0.12).setDepth(4);
       this.add.rectangle(x, y + 57 + depthBoost, Math.max(12, width * 0.34), 5, edgeColor, 0.19).setDepth(4);
@@ -156,7 +163,7 @@ export class GameScene extends Phaser.Scene {
       this.add.star(x, y - 2, 4, 5, 10, 0xfff4bd).setStrokeStyle(2, 0xb76d35).setDepth(5);
       this.add.star(x, y + 65 + depthBoost, 4, 5, 11, 0xffeea5, 0.32).setDepth(4);
     }
-    const platform: PlatformData = { index, x, y, width, top, face };
+    const platform: PlatformData = { index, x, y, width, height: surfaceHeight, landingHalfWidth, kind, top, face };
     if (checkpoint) {
       platform.label = this.add.text(x, y - 2, index > 100 ? '?' : `$${(index / 100).toFixed(2)}`, {
         fontFamily: 'monospace', fontSize: '13px', color: '#4f3518', fontStyle: 'bold',
@@ -178,23 +185,23 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createHud() {
-    this.chargeGlow = this.add.rectangle(210, 697, 276, 18, 0x25294f, 0.88).setScrollFactor(0).setDepth(30).setStrokeStyle(2, 0x6b7199);
-    this.chargeBar = this.add.rectangle(74, 697, 0, 12, 0x69e3c6).setOrigin(0, 0.5).setScrollFactor(0).setDepth(31);
-    this.hint = this.add.text(210, 660, this.practice ? '练习：按住蓄力，松开起跳' : '按住任意空白处蓄力', {
+    this.hint = this.add.text(210, 680, this.practice ? '练习：按住，听声音感受力量' : '', {
       fontFamily: 'monospace', fontSize: '14px', color: '#eef4ff', backgroundColor: '#171a37cc', padding: { x: 12, y: 7 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(31);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(31).setVisible(this.practice);
   }
 
   private onDown(pointer: Phaser.Input.Pointer) {
     if (!this.stable || this.jumping || pointer.y < 105 || pointer.y > 735) return;
     this.charging = true;
     this.charge = 0;
+    this.bridge.onChargeStart();
     this.tweens.add({ targets: this.hero, scaleY: 0.7, scaleX: 1.14, y: this.hero.y + 8, duration: 170 });
   }
 
   private onUp() {
     if (!this.charging || !this.stable) return;
     this.charging = false;
+    this.bridge.onChargeEnd();
     this.jump();
   }
 
@@ -203,8 +210,10 @@ export class GameScene extends Phaser.Scene {
     this.jumping = true;
     this.jumpStart = this.time.now;
     this.from = { x: this.hero.x, y: this.hero.y };
-    const distance = 38 + this.charge * 142;
+    const distance = 34 + this.charge * 225;
     this.to = { x: this.from.x + distance, y: this.from.y };
+    const target = this.platforms[this.current + 1];
+    this.to.y = target.y - 15;
     this.hero.setScale(1);
     this.hint.setVisible(false);
     this.emitSnapshot();
@@ -224,14 +233,12 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.charging) {
       this.charge = Math.min(1, this.charge + delta / 1800);
-      this.chargeBar.width = 272 * this.charge;
-      this.chargeBar.fillColor = this.charge > 0.78 ? 0xffd45e : 0x69e3c6;
     }
     if (!this.jumping) return;
     const duration = 620 + this.charge * 210;
     const t = Math.min(1, (this.time.now - this.jumpStart) / duration);
     this.hero.x = Phaser.Math.Linear(this.from.x, this.to.x, t);
-    this.hero.y = this.from.y - Math.sin(t * Math.PI) * (92 + this.charge * 55);
+    this.hero.y = Phaser.Math.Linear(this.from.y, this.to.y, t) - Math.sin(t * Math.PI) * (92 + this.charge * 55);
     this.hero.angle = Math.sin(t * Math.PI) * 10;
     this.shadow.x = this.hero.x;
     this.shadow.scaleX = 1 - Math.sin(t * Math.PI) * 0.45;
@@ -244,8 +251,8 @@ export class GameScene extends Phaser.Scene {
     this.hero.angle = 0;
     const target = this.platforms[this.current + 1];
     const heroCenter = this.hero.x;
-    const left = target.x - target.width / 2;
-    const right = target.x + target.width / 2;
+    const left = target.x - target.landingHalfWidth;
+    const right = target.x + target.landingHalfWidth;
     const overlap = Math.min(heroCenter + 7, right) - Math.max(heroCenter - 7, left);
     const centerInside = heroCenter >= left && heroCenter <= right;
     const landingX = Phaser.Math.Clamp(heroCenter, left + 7, right - 7);
@@ -254,11 +261,10 @@ export class GameScene extends Phaser.Scene {
     if (overlap > 0 && centerInside) {
       this.current += 1;
       while (this.platforms.length <= this.current + 24) this.createPlatform(this.platforms.length);
-      this.hero.setPosition(landingX, target.y - 19);
+      this.hero.setPosition(landingX, target.y - 15);
       this.shadow.setPosition(landingX, target.y - 2).setScale(1).setAlpha(0.28);
       this.stable = true;
       this.charge = 0;
-      this.chargeBar.width = 0;
       this.landBurst(edgeDepth < 9 || assisted);
       const reward = this.practice ? practiceReward(this.current, this.seed) : (defaultReward(this.current) ?? surpriseReward(this.current, this.seed));
       if (reward) {

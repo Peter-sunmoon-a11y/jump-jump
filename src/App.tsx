@@ -156,7 +156,7 @@ export function App() {
         {screen === 'game' && round && (
           <section className="game-screen">
             <Suspense fallback={<div className="game-loading">正在搭建天空岛…</div>}>
-              <PhaserGame ref={gameRef} seed={round.seed} practice={practice} quality={settings.quality} reducedMotion={settings.reducedMotion} onSnapshot={onSnapshot} onReward={onReward} onFell={() => finishRound('fell')} onExtensionGate={() => setExtensionGate(true)} />
+              <PhaserGame ref={gameRef} seed={round.seed} practice={practice} quality={settings.quality} reducedMotion={settings.reducedMotion} onSnapshot={onSnapshot} onReward={onReward} onFell={() => finishRound('fell')} onExtensionGate={() => setExtensionGate(true)} onChargeStart={() => gameAudio.startCharge(settings.sound)} onChargeEnd={() => gameAudio.stopCharge()} />
             </Suspense>
             <div className="game-topbar">
               <button className="icon-button" onClick={() => setSettingsOpen(true)} aria-label="设置">⚙</button>

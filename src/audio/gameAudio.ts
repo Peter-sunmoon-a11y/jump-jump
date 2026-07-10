@@ -11,6 +11,8 @@ const patterns: Record<SoundName, Array<[number, number, number]>> = {
 
 class GameAudio {
   private context: AudioContext | null = null;
+  private chargeOscillator: OscillatorNode | null = null;
+  private chargeGain: GainNode | null = null;
 
   play(name: SoundName, enabled = true) {
     if (!enabled || typeof AudioContext === 'undefined') return;
@@ -29,6 +31,35 @@ class GameAudio {
       oscillator.start(now + offset);
       oscillator.stop(now + offset + duration + 0.02);
     }
+  }
+
+  startCharge(enabled = true) {
+    if (!enabled || typeof AudioContext === 'undefined' || this.chargeOscillator) return;
+    this.context ??= new AudioContext();
+    if (this.context.state === 'suspended') void this.context.resume();
+    const now = this.context.currentTime;
+    const oscillator = this.context.createOscillator();
+    const gain = this.context.createGain();
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(105, now);
+    oscillator.frequency.exponentialRampToValueAtTime(430, now + 1.8);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.025, now + 0.08);
+    oscillator.connect(gain).connect(this.context.destination);
+    oscillator.start();
+    this.chargeOscillator = oscillator;
+    this.chargeGain = gain;
+  }
+
+  stopCharge() {
+    if (!this.context || !this.chargeOscillator || !this.chargeGain) return;
+    const now = this.context.currentTime;
+    this.chargeGain.gain.cancelScheduledValues(now);
+    this.chargeGain.gain.setValueAtTime(Math.max(0.0001, this.chargeGain.gain.value), now);
+    this.chargeGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.035);
+    this.chargeOscillator.stop(now + 0.045);
+    this.chargeOscillator = null;
+    this.chargeGain = null;
   }
 }
 

@@ -77,4 +77,6 @@ export interface GameBridgeEvents {
   onReward(reward: RewardHit): void;
   onFell(block: number): void;
   onExtensionGate(block: number): void;
+  onChargeStart(): void;
+  onChargeEnd(): void;
 }
