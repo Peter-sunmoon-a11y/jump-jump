@@ -35,7 +35,7 @@ export interface RewardHit {
 export interface RoundResult {
   roundId: string;
   block: number;
-  reason: 'fell' | 'cashout' | 'completed' | 'quit';
+  reason: 'fell' | 'cashout' | 'completed' | 'quit' | 'timeout';
   rewards: RewardHit[];
   baseUsdt: number;
   bonusUsdt: number;

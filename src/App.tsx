@@ -4,6 +4,7 @@ import { calculateXp, EXTENSION_PRICES, MEDALS, medalForXp } from './game/rules'
 import type { GameSnapshot, PlayerProfile, Quality, RewardHit, RoundResult, Screen, Settings, WeeklyRankEntry } from './game/types';
 import { mockPlatform } from './platform/mockPlatform';
 import { gameAudio } from './audio/gameAudio';
+import { DEFAULT_CHALLENGE_MS, extensionChallengeMs, formatRemainingTime } from './game/timing';
 
 const SETTINGS_KEY = 'jump-star-settings-v1';
 const defaultSettings: Settings = { quality: 'auto', music: true, sound: true, vibration: true, reducedMotion: false };
@@ -21,7 +22,7 @@ export function App() {
   const [rechargeOpen, setRechargeOpen] = useState(false);
   const [playPurchaseOpen, setPlayPurchaseOpen] = useState(false);
   const [practice, setPractice] = useState(false);
-  const [round, setRound] = useState<{ roundId: string; seed: number; startedAt: number } | null>(null);
+  const [round, setRound] = useState<{ roundId: string; seed: number; startedAt: number; deadline: number | null } | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot>({ block: 0, rewards: [], stable: true, extending: false });
   const [toast, setToast] = useState('');
   const [extensionGate, setExtensionGate] = useState(false);
@@ -68,7 +69,8 @@ export function App() {
       const started = await mockPlatform.startRound(isPractice);
       setProfile(started.profile);
       setPractice(isPractice);
-      setRound({ roundId: started.roundId, seed: started.seed, startedAt: Date.now() });
+      const startedAt = Date.now();
+      setRound({ roundId: started.roundId, seed: started.seed, startedAt, deadline: isPractice ? null : startedAt + DEFAULT_CHALLENGE_MS });
       setSnapshot({ block: 0, rewards: [], stable: true, extending: false });
       snapshotRef.current = { block: 0, rewards: [], stable: true, extending: false };
       endingRef.current = false;
@@ -82,6 +84,18 @@ export function App() {
     setToast(message);
     window.setTimeout(() => setToast(''), 1900);
   }
+
+  useEffect(() => {
+    if (screen !== 'game' || !round?.deadline || endingRef.current) return;
+    const timer = window.setInterval(() => {
+      if (Date.now() >= round.deadline!) {
+        window.clearInterval(timer);
+        showToast('时间到，已为你保留获得的奖励');
+        void finishRound('timeout');
+      }
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [screen, round?.deadline]);
 
   function onReward(reward: RewardHit) {
     gameAudio.play('reward', settings.sound);
@@ -100,6 +114,7 @@ export function App() {
   async function finishRound(reason: RoundResult['reason']) {
     if (!round || endingRef.current) return;
     endingRef.current = true;
+    setRound((current) => current ? { ...current, deadline: null } : current);
     if (reason === 'fell') gameAudio.play('fall', settings.sound);
     setExtensionGate(false);
     const current = gameRef.current?.snapshot() ?? snapshotRef.current;
@@ -137,6 +152,7 @@ export function App() {
       setProfile(nextProfile);
       setExtensionGate(false);
       gameRef.current?.extend(blocks);
+      setRound((current) => current ? { ...current, deadline: Date.now() + extensionChallengeMs(blocks) } : current);
       showToast(`已解锁 ${blocks} 格惊喜旅程`);
     } catch (error) { showToast(`${(error as Error).message}，请选择可用档位或充值`); }
     finally { setBusy(false); }
@@ -156,7 +172,7 @@ export function App() {
         {screen === 'game' && round && (
           <section className="game-screen">
             <Suspense fallback={<div className="game-loading">正在搭建天空岛…</div>}>
-              <PhaserGame ref={gameRef} seed={round.seed} practice={practice} quality={settings.quality} reducedMotion={settings.reducedMotion} onSnapshot={onSnapshot} onReward={onReward} onFell={() => finishRound('fell')} onExtensionGate={() => setExtensionGate(true)} onChargeStart={() => gameAudio.startCharge(settings.sound)} onChargeEnd={() => gameAudio.stopCharge()} />
+              <PhaserGame ref={gameRef} seed={round.seed} practice={practice} quality={settings.quality} reducedMotion={settings.reducedMotion} onSnapshot={onSnapshot} onReward={onReward} onFell={() => finishRound('fell')} onExtensionGate={() => { setExtensionGate(true); setRound((current) => current ? { ...current, deadline: null } : current); }} onChargeStart={() => gameAudio.startCharge(settings.sound)} onChargeEnd={() => gameAudio.stopCharge()} />
             </Suspense>
             <div className="game-topbar">
               <button className="icon-button" onClick={() => setSettingsOpen(true)} aria-label="设置">⚙</button>
@@ -164,6 +180,7 @@ export function App() {
               <div className="locked-reward"><small>{practice ? '练习惊喜' : '已锁定'}</small><strong>{practice ? snapshot.rewards.length : snapshot.rewards.filter((r) => r.kind === 'usdt').reduce((s, r) => s + r.value, 0).toFixed(2)}</strong><span>{practice ? '份' : 'USDT'}</span></div>
             </div>
             <RewardDistance block={snapshot.block} practice={practice} />
+            {round.deadline && <RoundTimer deadline={round.deadline} />}
             {snapshot.stable && snapshot.block > 0 && <button className="cashout-button" onClick={() => finishRound('cashout')}>结束并结算</button>}
             {practice && <div className="practice-tag">惊喜训练 · {Math.min(snapshot.block, 20)}/20</div>}
           </section>
@@ -195,6 +212,17 @@ function RewardDistance({ block, practice }: { block: number; practice: boolean 
         ? `再稳稳跳 ${distance} 格，就能锁定奖励`
         : `距离奖励跳台还有 ${distance} 格`;
   return <div className={`reward-distance ${distance <= 3 ? 'near' : ''}`}>✦ {message}</div>;
+}
+
+function RoundTimer({ deadline }: { deadline: number }) {
+  const [remaining, setRemaining] = useState(() => Math.max(0, deadline - Date.now()));
+  useEffect(() => {
+    setRemaining(Math.max(0, deadline - Date.now()));
+    const timer = window.setInterval(() => setRemaining(Math.max(0, deadline - Date.now())), 250);
+    return () => window.clearInterval(timer);
+  }, [deadline]);
+  const urgent = remaining <= 30_000;
+  return <div className={`round-timer ${urgent ? 'urgent' : ''}`}><span>挑战时间</span><strong>{formatRemainingTime(remaining)}</strong></div>;
 }
 
 function Home({ profile, onStart, onPractice, onSettings, onRecharge, onBuyPlay, onRanking, onRecords, busy }: { profile: PlayerProfile; onStart(): void; onPractice(): void; onSettings(): void; onRecharge(): void; onBuyPlay(): void; onRanking(): void; onRecords(): void; busy: boolean }) {
