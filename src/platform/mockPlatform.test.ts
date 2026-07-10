@@ -46,8 +46,15 @@ describe('mock platform round lifecycle', () => {
   it('simulates recharge and a server-provided weekly ranking', async () => {
     const profile = await mockPlatform.recharge(5);
     expect(profile.balance).toBe(13.88);
+    expect(profile.plays).toBe(7);
     const ranking = await mockPlatform.getWeeklyRanking();
     expect(ranking[0].rank).toBe(1);
     expect(ranking.some((entry) => entry.isCurrentUser)).toBe(true);
+  });
+
+  it('gifts one Play for every 5 USDT in a single recharge', async () => {
+    expect((await mockPlatform.recharge(1)).plays).toBe(6);
+    expect((await mockPlatform.recharge(10)).plays).toBe(8);
+    expect((await mockPlatform.recharge(20)).plays).toBe(12);
   });
 });

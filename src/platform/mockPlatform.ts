@@ -52,6 +52,7 @@ export const mockPlatform: PlatformAdapter & { resetDemo(): void } = {
     if (![1, 5, 10, 20].includes(amount)) throw new Error('无效充值档位');
     const profile = read(PROFILE_KEY, initialProfile);
     profile.balance = Number((profile.balance + amount).toFixed(2));
+    profile.plays += Math.floor(amount / 5);
     write(PROFILE_KEY, profile);
     return profile;
   },

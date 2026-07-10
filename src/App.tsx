@@ -172,7 +172,7 @@ export function App() {
 
         {extensionGate && <ExtensionModal profile={profile} block={snapshot.block} onBuy={buyExtension} onFinish={() => finishRound(snapshot.block === 100 ? 'completed' : 'cashout')} busy={busy} />}
         {settingsOpen && <SettingsModal settings={settings} onChange={setSettings} onClose={() => setSettingsOpen(false)} />}
-        {rechargeOpen && <RechargeModal balance={profile.balance} busy={busy} onClose={() => setRechargeOpen(false)} onRecharge={async (amount) => { setBusy(true); try { setProfile(await mockPlatform.recharge(amount)); setRechargeOpen(false); showToast(`模拟充值 ${amount.toFixed(2)} USDT 成功`); } finally { setBusy(false); } }} />}
+        {rechargeOpen && <RechargeModal balance={profile.balance} busy={busy} onClose={() => setRechargeOpen(false)} onRecharge={async (amount) => { setBusy(true); try { setProfile(await mockPlatform.recharge(amount)); setRechargeOpen(false); const gifted = Math.floor(amount / 5); showToast(`充值 ${amount.toFixed(2)} USDT 成功${gifted ? `，赠送 ${gifted} Play` : ''}`); } finally { setBusy(false); } }} />}
         {toast && <div className="toast">{toast}</div>}
         {busy && screen === 'game' && <div className="busy-dot">结算连接中…</div>}
       </main>
@@ -216,7 +216,7 @@ function Ranking({ profile, onBack }: { profile: PlayerProfile; onBack(): void }
 }
 
 function RechargeModal({ balance, busy, onClose, onRecharge }: { balance: number; busy: boolean; onClose(): void; onRecharge(amount: number): void }) {
-  return <div className="modal-backdrop"><div className="pixel-panel recharge-modal"><div className="modal-head"><h2>模拟平台充值</h2><button className="icon-button" onClick={onClose}>×</button></div><p>当前余额 <strong>{balance.toFixed(2)} USDT</strong></p><div className="recharge-grid">{[1, 5, 10, 20].map((amount) => <button disabled={busy} key={amount} onClick={() => onRecharge(amount)}><b>+{amount}</b><span>USDT</span></button>)}</div><small>演示环境不会产生真实扣款</small></div></div>;
+  return <div className="modal-backdrop"><div className="pixel-panel recharge-modal"><div className="modal-head"><h2>模拟平台充值</h2><button className="icon-button" onClick={onClose}>×</button></div><p>当前余额 <strong>{balance.toFixed(2)} USDT</strong></p><div className="recharge-offer">每充值满 5 USDT，赠送 1 Play</div><div className="recharge-grid">{[1, 5, 10, 20].map((amount) => <button disabled={busy} key={amount} onClick={() => onRecharge(amount)}><b>+{amount}</b><span>USDT{amount >= 5 ? ` · 赠 ${Math.floor(amount / 5)} Play` : ''}</span></button>)}</div><small>演示环境不会产生真实扣款</small></div></div>;
 }
 
 function Records({ onBack }: { onBack(): void }) {
