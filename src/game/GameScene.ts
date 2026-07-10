@@ -47,10 +47,10 @@ export class GameScene extends Phaser.Scene {
     this.createSky();
     for (let i = 0; i <= 24; i++) this.createPlatform(i);
     const start = this.platforms[0];
-    this.shadow = this.add.ellipse(start.x, start.y - 2, 27, 8, 0x11152f, 0.28).setDepth(8);
-    this.hero = this.createHero(start.x, start.y - 25);
+    this.shadow = this.add.ellipse(start.x, start.y - 2, 20, 6, 0x11152f, 0.28).setDepth(8);
+    this.hero = this.createHero(start.x, start.y - 19);
     this.createHud();
-    this.cameras.main.startFollow(this.hero, true, 0.08, 0, -110, 0);
+    this.cameras.main.startFollow(this.hero, true, 0.08, 0, -140, 0);
     this.input.on('pointerdown', this.onDown, this);
     this.input.on('pointerup', this.onUp, this);
     this.input.on('gameout', this.onUp, this);
@@ -78,8 +78,8 @@ export class GameScene extends Phaser.Scene {
 
   private createPlatform(index: number) {
     const previous = this.platforms[index - 1];
-    const width = index === 0 ? 96 : Math.round(62 + this.random(index, 1) * 34);
-    const gap = index === 0 ? 0 : Math.round(38 + Math.min(index, 180) * 0.06 + this.random(index, 2) * 27);
+    const width = index === 0 ? 76 : Math.round(48 + this.random(index, 1) * 28);
+    const gap = index === 0 ? 0 : Math.round(28 + Math.min(index, 180) * 0.06 + this.random(index, 2) * 20);
     const x = index === 0 ? 150 : previous.x + previous.width / 2 + gap + width / 2;
     const y = 545 + Math.round((this.random(index, 3) - 0.5) * 32);
     const checkpoint = index > 0 && index % 10 === 0;
@@ -172,12 +172,12 @@ export class GameScene extends Phaser.Scene {
 
   private createHero(x: number, y: number) {
     const hero = this.add.container(x, y).setDepth(12);
-    this.body = this.add.rectangle(0, 2, 22, 30, 0xff7eb6).setStrokeStyle(3, 0x5f315b);
-    const face = this.add.rectangle(0, -7, 16, 13, 0xffb0d1);
-    const eye1 = this.add.rectangle(-4, -8, 2, 3, 0x382a4d);
-    const eye2 = this.add.rectangle(4, -8, 2, 3, 0x382a4d);
-    const foot1 = this.add.rectangle(-6, 18, 8, 5, 0x5f315b);
-    const foot2 = this.add.rectangle(6, 18, 8, 5, 0x5f315b);
+    this.body = this.add.rectangle(0, 1, 16, 22, 0xff7eb6).setStrokeStyle(2, 0x5f315b);
+    const face = this.add.rectangle(0, -5, 12, 10, 0xffb0d1);
+    const eye1 = this.add.rectangle(-3, -6, 2, 2, 0x382a4d);
+    const eye2 = this.add.rectangle(3, -6, 2, 2, 0x382a4d);
+    const foot1 = this.add.rectangle(-5, 13, 6, 4, 0x5f315b);
+    const foot2 = this.add.rectangle(5, 13, 6, 4, 0x5f315b);
     hero.add([this.body, face, eye1, eye2, foot1, foot2]);
     return hero;
   }
@@ -208,7 +208,7 @@ export class GameScene extends Phaser.Scene {
     this.jumping = true;
     this.jumpStart = this.time.now;
     this.from = { x: this.hero.x, y: this.hero.y };
-    const distance = 50 + this.charge * 178;
+    const distance = 38 + this.charge * 142;
     this.to = { x: this.from.x + distance, y: this.from.y };
     this.hero.setScale(1);
     this.hint.setVisible(false);
@@ -251,18 +251,18 @@ export class GameScene extends Phaser.Scene {
     const heroCenter = this.hero.x;
     const left = target.x - target.width / 2;
     const right = target.x + target.width / 2;
-    const overlap = Math.min(heroCenter + 9, right) - Math.max(heroCenter - 9, left);
+    const overlap = Math.min(heroCenter + 7, right) - Math.max(heroCenter - 7, left);
     const centerInside = heroCenter > left && heroCenter < right;
     const edgeDepth = Math.min(heroCenter - left, right - heroCenter);
-    if (overlap > 0 && centerInside && edgeDepth >= 5) {
+    if (overlap > 0 && centerInside && edgeDepth >= 4) {
       this.current += 1;
       while (this.platforms.length <= this.current + 24) this.createPlatform(this.platforms.length);
-      this.hero.setPosition(heroCenter, target.y - 25);
+      this.hero.setPosition(heroCenter, target.y - 19);
       this.shadow.setPosition(heroCenter, target.y - 2).setScale(1).setAlpha(0.28);
       this.stable = true;
       this.charge = 0;
       this.chargeBar.width = 0;
-      this.landBurst(edgeDepth < 11);
+      this.landBurst(edgeDepth < 9);
       const reward = this.practice ? practiceReward(this.current, this.seed) : (defaultReward(this.current) ?? surpriseReward(this.current, this.seed));
       if (reward) {
         this.rewards.push(reward);
@@ -274,7 +274,7 @@ export class GameScene extends Phaser.Scene {
         this.bridge.onExtensionGate(this.current);
       } else {
         const practiceCheers = ['太稳啦！', '手感火热！', '漂亮起飞！', '星光为你亮起！', '完美节奏！'];
-        this.hint.setText(this.practice ? practiceCheers[this.current % practiceCheers.length] : edgeDepth < 11 ? '惊险站稳！继续保持' : this.current % 10 === 0 ? '奖励已锁定 ✦' : '漂亮！继续向前').setVisible(true);
+        this.hint.setText(this.practice ? practiceCheers[this.current % practiceCheers.length] : edgeDepth < 9 ? '惊险站稳！继续保持' : this.current % 10 === 0 ? '奖励已锁定 ✦' : '漂亮！继续向前').setVisible(true);
         this.time.delayedCall(900, () => this.hint.setVisible(false));
       }
     } else {
@@ -301,7 +301,7 @@ export class GameScene extends Phaser.Scene {
       setAngularVelocity(value: number): FallingContainer;
     };
     const fallingHero = this.matter.add.gameObject(this.hero, {
-      shape: { type: 'rectangle', width: 22, height: 35 },
+      shape: { type: 'rectangle', width: 16, height: 26 },
       frictionAir: 0.012,
       restitution: 0.18,
     }) as FallingContainer;
