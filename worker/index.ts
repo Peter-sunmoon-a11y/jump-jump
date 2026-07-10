@@ -1,4 +1,5 @@
 /// <reference types="@cloudflare/workers-types" />
+import { getUtcPlus7WeekStart } from '../shared/week';
 
 interface Env {
   DB: D1Database;
@@ -74,7 +75,7 @@ async function api(request: Request, env: Env, path: string): Promise<Response> 
     if (path === '/api/admin/rewards') return json((await env.DB.prepare('SELECT * FROM balance_ledger ORDER BY created_at DESC LIMIT 500').all()).results);
     if (path === '/api/admin/play-ledger') return json((await env.DB.prepare('SELECT * FROM play_ledger ORDER BY created_at DESC LIMIT 500').all()).results);
     if (path === '/api/admin/leaderboard/weekly') {
-      const since = Date.now() - 7 * 86400000;
+      const since = getUtcPlus7WeekStart();
       return json((await env.DB.prepare('SELECT p.player_id, p.display_name, COALESCE(SUM(r.base_reward_cents + r.bonus_reward_cents), 0) reward_cents FROM players p LEFT JOIN rounds r ON r.player_id = p.player_id AND r.ended_at >= ? GROUP BY p.player_id ORDER BY reward_cents DESC LIMIT 100').bind(since).all()).results);
     }
   }
@@ -150,7 +151,7 @@ async function api(request: Request, env: Env, path: string): Promise<Response> 
   }
   if (path === '/api/records') return json((await env.DB.prepare('SELECT * FROM rounds WHERE player_id = ? ORDER BY ended_at DESC LIMIT 50').bind(playerId).all()).results.map((row: any) => ({ roundId: row.round_id, block: row.block, reason: row.end_reason, rewards: JSON.parse(row.rewards_json), baseUsdt: row.base_reward_cents / 100, bonusUsdt: row.bonus_reward_cents / 100, xpEarned: row.xp_earned, startedAt: row.started_at })));
   if (path === '/api/ranking/weekly') {
-    const weekStart = Date.now() - 7 * 86400000;
+    const weekStart = getUtcPlus7WeekStart();
     const rows = (await env.DB.prepare('SELECT p.player_id, p.display_name, COALESCE(SUM(r.base_reward_cents + r.bonus_reward_cents), 0) reward_cents FROM players p LEFT JOIN rounds r ON r.player_id = p.player_id AND r.ended_at >= ? GROUP BY p.player_id ORDER BY reward_cents DESC LIMIT 100').bind(weekStart).all()).results as any[];
     return json(rows.map((row, i) => ({ rank: i + 1, playerName: row.display_name, reward: row.reward_cents / 100, isCurrentUser: row.player_id === playerId })));
   }
