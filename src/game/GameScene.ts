@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { defaultReward, practiceReward, surpriseReward } from './rules';
 import { getLandingZone, isSafeLanding } from './landing';
+import { generateGap } from './levelGeneration';
 import type { GameBridgeEvents, Quality, RewardHit } from './types';
 
 type SurfaceKind = 'rectangle' | 'ellipse';
@@ -80,7 +81,7 @@ export class GameScene extends Phaser.Scene {
     const previous = this.platforms[index - 1];
     const sizeRoll = this.random(index, 1);
     const width = index === 0 ? 88 : sizeRoll < 0.3 ? Math.round(44 + sizeRoll * 36) : sizeRoll > 0.76 ? Math.round(92 + (sizeRoll - 0.76) * 115) : Math.round(58 + sizeRoll * 39);
-    const gap = index === 0 ? 0 : Math.round(22 + Math.min(index, 180) * 0.08 + this.random(index, 2) * 72);
+    const gap = index === 0 ? 0 : generateGap(index, this.random(index, 2), this.random(index, 23), previous.width, width).gap;
     const x = index === 0 ? 150 : previous.x + previous.width / 2 + gap + width / 2;
     const y = index === 0 ? 545 : 535 + Math.round((this.random(index, 3) - 0.5) * 150);
     const checkpoint = index > 0 && index % 10 === 0;
