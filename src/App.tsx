@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { PhaserGameHandle } from './game/PhaserGame';
 import { calculateXp, EXTENSION_PRICES, MEDALS, medalForXp } from './game/rules';
 import type { GameSnapshot, PlayerProfile, Quality, RewardHit, RoundResult, Screen, Settings, WeeklyRankEntry } from './game/types';
-import { mockPlatform } from './platform/mockPlatform';
+import { platform } from './platform';
 import { gameAudio } from './audio/gameAudio';
 import { DEFAULT_CHALLENGE_MS, extensionChallengeMs, formatRemainingTime } from './game/timing';
 
@@ -34,15 +34,15 @@ export function App() {
 
   useEffect(() => {
     void (async () => {
-      let loadedProfile = await mockPlatform.getProfile();
-      const interrupted = await mockPlatform.getActiveRound();
+      let loadedProfile = await platform.getProfile();
+      const interrupted = await platform.getActiveRound();
       if (interrupted) {
         if (interrupted.practice) {
-          await mockPlatform.discardRound(interrupted.roundId);
+          await platform.discardRound(interrupted.roundId);
         } else {
           const baseUsdt = interrupted.snapshot.rewards.filter((item) => item.kind === 'usdt').reduce((sum, item) => sum + item.value, 0);
           const bonus = medalForXp(loadedProfile.xp).bonus;
-          loadedProfile = await mockPlatform.settle({
+          loadedProfile = await platform.settle({
             roundId: interrupted.roundId,
             block: interrupted.snapshot.block,
             reason: 'quit',
@@ -66,7 +66,7 @@ export function App() {
     if (busy) return;
     setBusy(true);
     try {
-      const started = await mockPlatform.startRound(isPractice);
+      const started = await platform.startRound(isPractice);
       setProfile(started.profile);
       setPractice(isPractice);
       const startedAt = Date.now();
@@ -107,7 +107,7 @@ export function App() {
     if (next.block > snapshotRef.current.block) gameAudio.play('land', settings.sound);
     snapshotRef.current = next;
     setSnapshot(next);
-    if (round) void mockPlatform.updateRound(round.roundId, next).catch(() => showToast('局次同步暂时中断'));
+    if (round) void platform.updateRound(round.roundId, next).catch(() => showToast('局次同步暂时中断'));
     if (practice && next.block >= 20 && next.stable) void finishRound('completed');
   }
 
@@ -119,7 +119,7 @@ export function App() {
     setExtensionGate(false);
     const current = gameRef.current?.snapshot() ?? snapshotRef.current;
     if (practice) {
-      await mockPlatform.discardRound(round.roundId);
+      await platform.discardRound(round.roundId);
       setResult({ roundId: round.roundId, block: current.block, reason, rewards: current.rewards, baseUsdt: 0, bonusUsdt: 0, xpEarned: 0, startedAt: round.startedAt });
       setScreen('results');
       return;
@@ -132,7 +132,7 @@ export function App() {
       baseUsdt: Number(baseUsdt.toFixed(2)), bonusUsdt, xpEarned: calculateXp(current.block, current.rewards), startedAt: round.startedAt,
     };
     try {
-      const nextProfile = await mockPlatform.settle(settled);
+      const nextProfile = await platform.settle(settled);
       setProfile(nextProfile);
       setResult(settled);
       setScreen('results');
@@ -148,7 +148,7 @@ export function App() {
     setBusy(true);
     try {
       if (!round) throw new Error('局次已失效');
-      const nextProfile = await mockPlatform.purchaseExtension(round.roundId, blocks);
+      const nextProfile = await platform.purchaseExtension(round.roundId, blocks);
       setProfile(nextProfile);
       setExtensionGate(false);
       gameRef.current?.extend(blocks);
@@ -191,8 +191,8 @@ export function App() {
 
         {extensionGate && <ExtensionModal profile={profile} block={snapshot.block} onBuy={buyExtension} onFinish={() => finishRound(snapshot.block === 100 ? 'completed' : 'cashout')} busy={busy} />}
         {settingsOpen && <SettingsModal settings={settings} onChange={setSettings} onClose={() => setSettingsOpen(false)} />}
-        {rechargeOpen && <RechargeModal balance={profile.balance} busy={busy} onClose={() => setRechargeOpen(false)} onRecharge={async (amount) => { setBusy(true); try { setProfile(await mockPlatform.recharge(amount)); setRechargeOpen(false); const gifted = Math.floor(amount / 5); showToast(`充值 ${amount.toFixed(2)} USDT 成功${gifted ? `，赠送 ${gifted} Play` : ''}`); } finally { setBusy(false); } }} />}
-        {playPurchaseOpen && <PlayPurchaseModal profile={profile} busy={busy} onClose={() => setPlayPurchaseOpen(false)} onRecharge={() => { setPlayPurchaseOpen(false); setRechargeOpen(true); }} onPurchase={async (count) => { setBusy(true); try { setProfile(await mockPlatform.purchasePlays(count)); setPlayPurchaseOpen(false); showToast(`成功购买 ${count} Play`); } catch (error) { showToast((error as Error).message); } finally { setBusy(false); } }} />}
+        {rechargeOpen && <RechargeModal balance={profile.balance} busy={busy} onClose={() => setRechargeOpen(false)} onRecharge={async (amount) => { setBusy(true); try { setProfile(await platform.recharge(amount)); setRechargeOpen(false); const gifted = Math.floor(amount / 5); showToast(`充值 ${amount.toFixed(2)} USDT 成功${gifted ? `，赠送 ${gifted} Play` : ''}`); } finally { setBusy(false); } }} />}
+        {playPurchaseOpen && <PlayPurchaseModal profile={profile} busy={busy} onClose={() => setPlayPurchaseOpen(false)} onRecharge={() => { setPlayPurchaseOpen(false); setRechargeOpen(true); }} onPurchase={async (count) => { setBusy(true); try { setProfile(await platform.purchasePlays(count)); setPlayPurchaseOpen(false); showToast(`成功购买 ${count} Play`); } catch (error) { showToast((error as Error).message); } finally { setBusy(false); } }} />}
         {toast && <div className="toast">{toast}</div>}
         {busy && screen === 'game' && <div className="busy-dot">结算连接中…</div>}
       </main>
@@ -256,7 +256,7 @@ function Results({ result, practice, medal, onAgain, onHome, busy }: { result: R
 
 function Ranking({ profile, onBack }: { profile: PlayerProfile; onBack(): void }) {
   const [rows, setRows] = useState<WeeklyRankEntry[]>([]);
-  useEffect(() => { void mockPlatform.getWeeklyRanking().then(setRows); }, [profile.totalReward]);
+  useEffect(() => { void platform.getWeeklyRanking().then(setRows); }, [profile.totalReward]);
   return <section className="sub-screen"><SubHeader title="本周奖励榜" onBack={onBack}/><p className="sub-copy">周一 00:00 重置 · 已结算 USDT</p><div className="podium">♛</div><div className="rank-list">{rows.map((row) => <div className={row.isCurrentUser ? 'me' : ''} key={row.playerName}><b>{row.rank}</b><span>{row.playerName}</span><strong>{row.reward.toFixed(2)} USDT</strong></div>)}</div></section>;
 }
 
@@ -272,7 +272,8 @@ function PlayPurchaseModal({ profile, busy, onClose, onRecharge, onPurchase }: {
 }
 
 function Records({ onBack }: { onBack(): void }) {
-  const records = mockPlatform.getRecords();
+  const [records, setRecords] = useState<RoundResult[]>([]);
+  useEffect(() => { void platform.getRecords().then(setRecords); }, []);
   return <section className="sub-screen"><SubHeader title="我的战绩" onBack={onBack}/><p className="sub-copy">每一次勇敢起跳，都有迹可循</p><div className="record-list">{records.length === 0 ? <div className="empty">还没有战绩<br/><small>去完成第一场跳跃吧</small></div> : records.map((item) => <div key={item.roundId}><div><strong>抵达第 {item.block} 格</strong><small>{new Date(item.startedAt).toLocaleString('zh-CN')}</small></div><b>+{(item.baseUsdt + item.bonusUsdt).toFixed(2)} USDT</b></div>)}</div></section>;
 }
 

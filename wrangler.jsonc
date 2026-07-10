@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jump-jump",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-07-10",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "jump-jump-production",
+      "database_id": "237e4f0b-2d34-4d1b-bd58-b8273f93bc75",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

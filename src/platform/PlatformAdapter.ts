@@ -18,5 +18,5 @@ export interface PlatformAdapter {
   discardRound(roundId: string): Promise<void>;
   purchaseExtension(roundId: string, blocks: number): Promise<PlayerProfile>;
   settle(result: RoundResult): Promise<PlayerProfile>;
-  getRecords(): RoundResult[];
+  getRecords(): Promise<RoundResult[]>;
 }

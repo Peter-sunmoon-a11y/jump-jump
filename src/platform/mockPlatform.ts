@@ -131,6 +131,6 @@ export const mockPlatform: PlatformAdapter & { resetDemo(): void } = {
     if (active?.roundId === result.roundId) localStorage.removeItem(ACTIVE_ROUND_KEY);
     return profile;
   },
-  getRecords() { return read<RoundResult[]>(RECORDS_KEY, []); },
+  async getRecords() { return read<RoundResult[]>(RECORDS_KEY, []); },
   resetDemo() { localStorage.removeItem(PROFILE_KEY); localStorage.removeItem(RECORDS_KEY); localStorage.removeItem(ACTIVE_ROUND_KEY); },
 };

@@ -31,7 +31,7 @@ describe('mock platform round lifecycle', () => {
     const second = await mockPlatform.settle(result);
     expect(first.balance).toBe(8.98);
     expect(second.balance).toBe(8.98);
-    expect(mockPlatform.getRecords()).toHaveLength(1);
+    expect(await mockPlatform.getRecords()).toHaveLength(1);
     expect(await mockPlatform.getActiveRound()).toBeNull();
   });
 
