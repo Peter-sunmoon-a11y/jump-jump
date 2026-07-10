@@ -106,13 +106,6 @@ export class GameScene extends Phaser.Scene {
     const half = width / 2;
     const topHalf = 15;
     const depthBoost = Math.round(this.random(index, 13) * 20);
-    const chamfer = shapeKind === 1 ? 9 : shapeKind === 2 ? 5 : 2;
-    const topPoints = [
-      -half + chamfer, -topHalf, half - chamfer, -topHalf,
-      half, -topHalf + chamfer, half, topHalf - chamfer,
-      half - chamfer, topHalf, -half + chamfer, topHalf,
-      -half, topHalf - chamfer, -half, -topHalf + chamfer,
-    ];
     const facePointsByKind = [
       [0, 0, half, 16, half, 48 + depthBoost, half * 0.48, 42 + depthBoost, 0, 61 + depthBoost, -half * 0.48, 42 + depthBoost, -half, 48 + depthBoost, -half, 16],
       [0, 0, half, 16, half - 8, 45 + depthBoost, 15, 38 + depthBoost, 6, 68 + depthBoost, 0, 82 + depthBoost, -6, 68 + depthBoost, -15, 38 + depthBoost, -half + 8, 45 + depthBoost, -half, 16],
@@ -138,7 +131,9 @@ export class GameScene extends Phaser.Scene {
       this.add.rectangle(chainX, y + 51 + chainLength, 9, 9, edgeColor, 0.5).setAngle(45).setDepth(2);
     }
     this.add.rectangle(x, y + 63 + depthBoost, 13, 13, edgeColor, 0.48).setAngle(45).setStrokeStyle(2, 0xffffff, 0.18).setDepth(3);
-    const top = this.add.polygon(x, y, topPoints, topColor).setStrokeStyle(3, edgeColor).setDepth(3);
+    // The playable landing surface always matches the logical collision width.
+    // Shape variation is deliberately restricted to the non-playable structure below it.
+    const top = this.add.rectangle(x, y, width, topHalf * 2, topColor).setStrokeStyle(3, edgeColor).setDepth(3);
     if (shapeKind === 0) {
       this.add.rectangle(x - half + 7, y + 21, 6, 22, 0xffffff, 0.12).setDepth(4);
       this.add.rectangle(x, y + 57 + depthBoost, Math.max(12, width * 0.34), 5, edgeColor, 0.19).setDepth(4);
@@ -252,11 +247,11 @@ export class GameScene extends Phaser.Scene {
     const left = target.x - target.width / 2;
     const right = target.x + target.width / 2;
     const overlap = Math.min(heroCenter + 7, right) - Math.max(heroCenter - 7, left);
-    const withinAssistRange = heroCenter >= left - 5 && heroCenter <= right + 5;
-    const landingX = Phaser.Math.Clamp(heroCenter, left + 3, right - 3);
+    const centerInside = heroCenter >= left && heroCenter <= right;
+    const landingX = Phaser.Math.Clamp(heroCenter, left + 7, right - 7);
     const edgeDepth = Math.min(landingX - left, right - landingX);
     const assisted = heroCenter !== landingX;
-    if (overlap >= 3 && withinAssistRange) {
+    if (overlap > 0 && centerInside) {
       this.current += 1;
       while (this.platforms.length <= this.current + 24) this.createPlatform(this.platforms.length);
       this.hero.setPosition(landingX, target.y - 19);
