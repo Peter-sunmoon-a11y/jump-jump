@@ -104,7 +104,8 @@ export class GameScene extends Phaser.Scene {
     const edgeColor = checkpoint ? 0xffeea5 : palette.edge;
     const shapeKind = checkpoint ? 4 : Math.floor(this.random(index, 11) * 4);
     const surfaceKinds: SurfaceKind[] = ['rectangle', 'circle', 'diamond', 'triangle', 'ellipse'];
-    const kind = index === 0 ? 'rectangle' : surfaceKinds[Math.floor(this.random(index, 19) * surfaceKinds.length) % surfaceKinds.length];
+    let kind = index === 0 ? 'rectangle' : surfaceKinds[Math.floor(this.random(index, 19) * surfaceKinds.length) % surfaceKinds.length];
+    if (kind === 'triangle' && width < 68) kind = 'ellipse';
     const half = width / 2;
     const surfaceHeight = kind === 'circle' ? width : kind === 'ellipse' ? Math.round(width * 0.52) : kind === 'triangle' ? Math.round(width * 0.62) : 30;
     const topHalf = surfaceHeight / 2;
@@ -137,10 +138,10 @@ export class GameScene extends Phaser.Scene {
     let top: Phaser.GameObjects.Shape;
     if (kind === 'circle' || kind === 'ellipse') top = this.add.ellipse(x, y, width, surfaceHeight, topColor);
     else if (kind === 'diamond') top = this.add.polygon(x, y, [0, -topHalf, half, 0, 0, topHalf, -half, 0], topColor);
-    else if (kind === 'triangle') top = this.add.triangle(x, y, 0, topHalf, half, topHalf, half, -topHalf, topColor);
+    else if (kind === 'triangle') top = this.add.triangle(x, y, -half, topHalf, half, topHalf, 0, -topHalf, topColor);
     else top = this.add.rectangle(x, y, width, surfaceHeight, topColor);
     top.setStrokeStyle(3, edgeColor).setDepth(3);
-    const landingHalfWidth = Math.max(12, kind === 'triangle' ? width * 0.34 : kind === 'diamond' ? width * 0.38 : width / 2);
+    const landingHalfWidth = kind === 'triangle' ? width * 0.2 : kind === 'diamond' ? width * 0.42 : kind === 'circle' || kind === 'ellipse' ? width * 0.46 : width / 2;
     if (shapeKind === 0) {
       this.add.rectangle(x - half + 7, y + 21, 6, 22, 0xffffff, 0.12).setDepth(4);
       this.add.rectangle(x, y + 57 + depthBoost, Math.max(12, width * 0.34), 5, edgeColor, 0.19).setDepth(4);
@@ -254,21 +255,22 @@ export class GameScene extends Phaser.Scene {
     this.hero.angle = 0;
     const target = this.platforms[this.current + 1];
     const heroCenter = this.hero.x;
-    const left = target.x - target.landingHalfWidth;
-    const right = target.x + target.landingHalfWidth;
-    const overlap = Math.min(heroCenter + 7, right) - Math.max(heroCenter - 7, left);
+    const footHalfWidth = 7;
+    const safeHalfWidth = Math.max(1, target.landingHalfWidth - footHalfWidth);
+    const left = target.x - safeHalfWidth;
+    const right = target.x + safeHalfWidth;
     const centerInside = heroCenter >= left && heroCenter <= right;
-    const landingX = Phaser.Math.Clamp(heroCenter, left + 7, right - 7);
-    const edgeDepth = Math.min(landingX - left, right - landingX);
-    const assisted = heroCenter !== landingX;
-    if (overlap > 0 && centerInside) {
+    const landingX = heroCenter;
+    const edgeDepth = Math.min(heroCenter - left, right - heroCenter);
+    const nearShapeEdge = edgeDepth < 4;
+    if (centerInside) {
       this.current += 1;
       while (this.platforms.length <= this.current + 24) this.createPlatform(this.platforms.length);
       this.hero.setPosition(landingX, target.y - 15);
       this.shadow.setPosition(landingX, target.y - 2).setScale(1).setAlpha(0.28);
       this.stable = true;
       this.charge = 0;
-      this.landBurst(edgeDepth < 9 || assisted);
+      this.landBurst(nearShapeEdge);
       const reward = this.practice ? practiceReward(this.current, this.seed) : (defaultReward(this.current) ?? surpriseReward(this.current, this.seed));
       if (reward) {
         this.rewards.push(reward);
@@ -280,7 +282,7 @@ export class GameScene extends Phaser.Scene {
         this.bridge.onExtensionGate(this.current);
       } else {
         const practiceCheers = ['太稳啦！', '手感火热！', '漂亮起飞！', '星光为你亮起！', '完美节奏！'];
-        this.hint.setText(this.practice ? practiceCheers[this.current % practiceCheers.length] : edgeDepth < 9 || assisted ? '惊险站稳！继续保持' : this.current % 10 === 0 ? '奖励已锁定 ✦' : '漂亮！继续向前').setVisible(true);
+        this.hint.setText(this.practice ? practiceCheers[this.current % practiceCheers.length] : nearShapeEdge ? '惊险站稳！继续保持' : this.current % 10 === 0 ? '奖励已锁定 ✦' : '漂亮！继续向前').setVisible(true);
         this.time.delayedCall(900, () => this.hint.setVisible(false));
       }
     } else {
