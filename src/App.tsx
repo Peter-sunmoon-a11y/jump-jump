@@ -19,6 +19,7 @@ export function App() {
   const [settings, setSettings] = useState(readSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [rechargeOpen, setRechargeOpen] = useState(false);
+  const [playPurchaseOpen, setPlayPurchaseOpen] = useState(false);
   const [practice, setPractice] = useState(false);
   const [round, setRound] = useState<{ roundId: string; seed: number; startedAt: number } | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot>({ block: 0, rewards: [], stable: true, extending: false });
@@ -151,7 +152,7 @@ export function App() {
     <div className="app-shell">
       <div className="ambient ambient-one" /><div className="ambient ambient-two" />
       <main className="phone-stage">
-        {screen === 'home' && <Home profile={profile} onStart={() => startGame(false)} onPractice={() => startGame(true)} onSettings={() => setSettingsOpen(true)} onRecharge={() => setRechargeOpen(true)} onRanking={() => setScreen('ranking')} onRecords={() => setScreen('records')} busy={busy} />}
+        {screen === 'home' && <Home profile={profile} onStart={() => startGame(false)} onPractice={() => startGame(true)} onSettings={() => setSettingsOpen(true)} onRecharge={() => setRechargeOpen(true)} onBuyPlay={() => setPlayPurchaseOpen(true)} onRanking={() => setScreen('ranking')} onRecords={() => setScreen('records')} busy={busy} />}
         {screen === 'game' && round && (
           <section className="game-screen">
             <Suspense fallback={<div className="game-loading">正在搭建天空岛…</div>}>
@@ -173,6 +174,7 @@ export function App() {
         {extensionGate && <ExtensionModal profile={profile} block={snapshot.block} onBuy={buyExtension} onFinish={() => finishRound(snapshot.block === 100 ? 'completed' : 'cashout')} busy={busy} />}
         {settingsOpen && <SettingsModal settings={settings} onChange={setSettings} onClose={() => setSettingsOpen(false)} />}
         {rechargeOpen && <RechargeModal balance={profile.balance} busy={busy} onClose={() => setRechargeOpen(false)} onRecharge={async (amount) => { setBusy(true); try { setProfile(await mockPlatform.recharge(amount)); setRechargeOpen(false); const gifted = Math.floor(amount / 5); showToast(`充值 ${amount.toFixed(2)} USDT 成功${gifted ? `，赠送 ${gifted} Play` : ''}`); } finally { setBusy(false); } }} />}
+        {playPurchaseOpen && <PlayPurchaseModal profile={profile} busy={busy} onClose={() => setPlayPurchaseOpen(false)} onRecharge={() => { setPlayPurchaseOpen(false); setRechargeOpen(true); }} onPurchase={async (count) => { setBusy(true); try { setProfile(await mockPlatform.purchasePlays(count)); setPlayPurchaseOpen(false); showToast(`成功购买 ${count} Play`); } catch (error) { showToast((error as Error).message); } finally { setBusy(false); } }} />}
         {toast && <div className="toast">{toast}</div>}
         {busy && screen === 'game' && <div className="busy-dot">结算连接中…</div>}
       </main>
@@ -180,7 +182,7 @@ export function App() {
   );
 }
 
-function Home({ profile, onStart, onPractice, onSettings, onRecharge, onRanking, onRecords, busy }: { profile: PlayerProfile; onStart(): void; onPractice(): void; onSettings(): void; onRecharge(): void; onRanking(): void; onRecords(): void; busy: boolean }) {
+function Home({ profile, onStart, onPractice, onSettings, onRecharge, onBuyPlay, onRanking, onRecords, busy }: { profile: PlayerProfile; onStart(): void; onPractice(): void; onSettings(): void; onRecharge(): void; onBuyPlay(): void; onRanking(): void; onRecords(): void; busy: boolean }) {
   const medal = medalForXp(profile.xp);
   const index = MEDALS.indexOf(medal);
   const next = MEDALS[index + 1];
@@ -190,7 +192,7 @@ function Home({ profile, onStart, onPractice, onSettings, onRecharge, onRanking,
       <div className="player"><div className="avatar">★</div><div><strong>{profile.name}</strong><small>{medal.name} · 奖励 +{medal.bonus * 100}%</small></div></div>
       <button className="icon-button" onClick={onSettings}>⚙</button>
     </header>
-    <div className="balance-row"><div><span>PLAY</span><strong>▣ {profile.plays}</strong></div><div className="balance-box"><span>平台余额</span><strong>₮ {profile.balance.toFixed(2)}</strong><button onClick={onRecharge}>＋</button></div></div>
+    <div className="balance-row"><div className="balance-box"><span>PLAY</span><strong>▣ {profile.plays}</strong><button onClick={onBuyPlay}>＋</button></div><div className="balance-box"><span>平台余额</span><strong>₮ {profile.balance.toFixed(2)}</strong><button onClick={onRecharge}>＋</button></div></div>
     <div className="hero-art"><div className="pixel-star s1">✦</div><div className="pixel-star s2">✦</div><div className="island back"/><div className="jumper"><i/><b>•&nbsp;•</b></div><div className="island front"><span>START</span></div></div>
     <div className="title-lockup"><p>治愈系像素跳跃</p><h1>跳跳之星</h1><span>每一次落地，都值得庆祝</span></div>
     <button className="primary-button" disabled={busy || profile.plays < 1} onClick={onStart}><span>{profile.plays ? '开始跳跃' : '获取 Play'}</span><small>{profile.plays ? '消耗 1 PLAY' : '当前次数不足'}</small></button>
@@ -217,6 +219,13 @@ function Ranking({ profile, onBack }: { profile: PlayerProfile; onBack(): void }
 
 function RechargeModal({ balance, busy, onClose, onRecharge }: { balance: number; busy: boolean; onClose(): void; onRecharge(amount: number): void }) {
   return <div className="modal-backdrop"><div className="pixel-panel recharge-modal"><div className="modal-head"><h2>模拟平台充值</h2><button className="icon-button" onClick={onClose}>×</button></div><p>当前余额 <strong>{balance.toFixed(2)} USDT</strong></p><div className="recharge-offer">每充值满 5 USDT，赠送 1 Play</div><div className="recharge-grid">{[1, 5, 10, 20].map((amount) => <button disabled={busy} key={amount} onClick={() => onRecharge(amount)}><b>+{amount}</b><span>USDT{amount >= 5 ? ` · 赠 ${Math.floor(amount / 5)} Play` : ''}</span></button>)}</div><small>演示环境不会产生真实扣款</small></div></div>;
+}
+
+function PlayPurchaseModal({ profile, busy, onClose, onRecharge, onPurchase }: { profile: PlayerProfile; busy: boolean; onClose(): void; onRecharge(): void; onPurchase(count: number): void }) {
+  const [count, setCount] = useState(1);
+  const total = count * 5;
+  const affordable = profile.balance >= total;
+  return <div className="modal-backdrop"><div className="pixel-panel play-purchase-modal"><div className="modal-head"><h2>购买 Play</h2><button className="icon-button" onClick={onClose}>×</button></div><div className="play-price"><strong>1 Play</strong><span>= 5.00 USDT</span></div><label>购买数量</label><div className="quantity-control"><button onClick={() => setCount(Math.max(1, count - 1))}>−</button><strong>{count}</strong><button onClick={() => setCount(Math.min(20, count + 1))}>＋</button></div><div className="purchase-total"><span>合计</span><strong>{total.toFixed(2)} USDT</strong></div><p>平台余额：{profile.balance.toFixed(2)} USDT</p>{affordable ? <button className="primary-button compact" disabled={busy} onClick={() => onPurchase(count)}>确认购买 {count} Play</button> : <button className="primary-button compact" disabled={busy} onClick={onRecharge}>余额不足，前往充值</button>}<small>购买所得 Play 永久有效，可无限累计</small></div></div>;
 }
 
 function Records({ onBack }: { onBack(): void }) {

@@ -56,6 +56,17 @@ export const mockPlatform: PlatformAdapter & { resetDemo(): void } = {
     write(PROFILE_KEY, profile);
     return profile;
   },
+  async purchasePlays(count: number) {
+    await delay(220);
+    if (!Number.isInteger(count) || count < 1 || count > 100) throw new Error('无效购买数量');
+    const profile = read(PROFILE_KEY, initialProfile);
+    const total = count * 5;
+    if (profile.balance < total) throw new Error('平台余额不足');
+    profile.balance = Number((profile.balance - total).toFixed(2));
+    profile.plays += count;
+    write(PROFILE_KEY, profile);
+    return profile;
+  },
   async getActiveRound() { await delay(30); return read<ActiveRound | null>(ACTIVE_ROUND_KEY, null); },
   async startRound(practice = false) {
     await delay();

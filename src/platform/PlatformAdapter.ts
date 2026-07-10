@@ -11,6 +11,7 @@ export interface PlatformAdapter {
   getGameConfig(): Promise<RemoteGameConfig>;
   getWeeklyRanking(): Promise<WeeklyRankEntry[]>;
   recharge(amount: number): Promise<PlayerProfile>;
+  purchasePlays(count: number): Promise<PlayerProfile>;
   getActiveRound(): Promise<ActiveRound | null>;
   startRound(practice?: boolean): Promise<StartedRound>;
   updateRound(roundId: string, snapshot: GameSnapshot): Promise<void>;

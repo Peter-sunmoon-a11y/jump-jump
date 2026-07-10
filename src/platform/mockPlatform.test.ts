@@ -57,4 +57,11 @@ describe('mock platform round lifecycle', () => {
     expect((await mockPlatform.recharge(10)).plays).toBe(8);
     expect((await mockPlatform.recharge(20)).plays).toBe(12);
   });
+
+  it('sells Play for 5 USDT each from platform balance', async () => {
+    const purchased = await mockPlatform.purchasePlays(1);
+    expect(purchased.plays).toBe(7);
+    expect(purchased.balance).toBe(3.88);
+    await expect(mockPlatform.purchasePlays(1)).rejects.toThrow('平台余额不足');
+  });
 });
